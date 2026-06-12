@@ -1,0 +1,15 @@
+{
+  "name": "ecommerce-store-workspace",
+  "private": true,
+  "scripts": {
+    "test": "npm run test:live && npm run test:unit",
+    "test:live": "npm --prefix server run test:live && npm --prefix client run test:live",
+    "test:unit": "npm --prefix server run test:unit:plain && npm --prefix client run test:unit:ci",
+    "test:server": "npm --prefix server test",
+    "test:server:plain": "npm --prefix server run test:plain",
+    "test:server:unit": "npm --prefix server run test:unit:plain",
+    "test:client": "npm --prefix client run test:ci",
+    "test:client:unit": "npm --prefix client run test:unit:ci",
+    "reset:data": "npm --prefix server run reset:data"
+  }
+}

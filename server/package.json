@@ -1,0 +1,38 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon --legacy-watch index.js",
+    "start": "node index.js",
+    "reset:data": "node scripts/reset-data.js",
+    "test": "npm run test:live && npm run test:unit",
+    "test:plain": "npm run test:live && npm run test:unit:plain",
+    "test:live": "node --test tests/live.test.js",
+    "test:unit": "node --test tests/api.test.js",
+    "test:unit:plain": "node --test --test-reporter spec tests/api.test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-validator": "^7.3.2",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.0.2",
+    "mysql2": "^3.15.2",
+    "nodemailer": "^8.0.7",
+    "sequelize": "^6.37.8",
+    "uuid": "^14.0.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
