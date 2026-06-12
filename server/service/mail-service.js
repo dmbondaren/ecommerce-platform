@@ -5,6 +5,12 @@ const path = require('path')
 class MailService {
 
     constructor(){
+        this.enabled = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD)
+        if (!this.enabled) {
+            this.transporter = null
+            return
+        }
+
         this.transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST,
             port: process.env.SMTP_PORT,
@@ -14,6 +20,14 @@ class MailService {
                 pass: process.env.SMTP_PASSWORD
             }
         })
+    }
+
+    async sendMail(options) {
+        if (!this.enabled) {
+            console.log(`[mail disabled] ${options.subject || 'email'} -> ${options.to || ''}`)
+            return
+        }
+        return this.transporter.sendMail(options)
     }
 
     listingImage(listing, cid){
@@ -29,7 +43,7 @@ class MailService {
     }
 
     async sendActivationMail(to, link){
-        await this.transporter.sendMail({
+        await this.sendMail({
             from: process.env.SMTP_USER,
             to,
             subject: `Підтвердження реєстрації ${process.env.API_URL || ''}`,
@@ -44,7 +58,7 @@ class MailService {
     }
 
     async sendPasswordResetMail(to, link){
-        await this.transporter.sendMail({
+        await this.sendMail({
             from: process.env.SMTP_USER,
             to,
             subject: `Відновлення пароля ${process.env.API_URL || ''}`,
@@ -66,7 +80,7 @@ class MailService {
         const currency = listing.currency || 'UAH'
         const title = listing.title || 'Оголошення'
         const link = `${process.env.CLIENT_URL || 'http://localhost:3000'}/listing/${listing.id || listing._id || ''}`
-        await this.transporter.sendMail({
+        await this.sendMail({
             from: process.env.SMTP_USER,
             to,
             subject: `Ціна знижена: ${title}`,
@@ -98,7 +112,7 @@ class MailService {
         const seller = listing.seller_nickname || listing.seller_email || 'Продавець'
         const link = `${process.env.CLIENT_URL || 'http://localhost:3000'}/listing/${listing.id || ''}`
         const image = this.listingImage(listing, `purchase-buyer-${listing.id || Date.now()}`)
-        await this.transporter.sendMail({
+        await this.sendMail({
             from: process.env.SMTP_USER,
             to,
             subject: `Дякуємо за покупку: ${title}`,
@@ -127,7 +141,7 @@ class MailService {
         const title = listing.title || 'Оголошення'
         const buyerName = buyer?.nickname || buyer?.email || 'Покупець'
         const image = this.listingImage(listing, `purchase-seller-${listing.id || Date.now()}`)
-        await this.transporter.sendMail({
+        await this.sendMail({
             from: process.env.SMTP_USER,
             to,
             subject: `Ваш товар купили: ${title}`,
