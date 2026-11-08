@@ -1,6 +1,6 @@
 # Ecommerce Platform
 
-Dockerized ecommerce marketplace with React frontend, Express backend, WebSocket chat, file uploads, and MySQL storage.
+A Dockerized ecommerce marketplace with a React frontend, an Express backend, WebSocket chat, file uploads and MySQL storage.
 
 ## Quick Start
 
@@ -9,7 +9,7 @@ Requirements:
 - Docker Desktop
 - Git
 
-Run the full project:
+The full project is started with the following commands:
 
 ```bash
 git clone https://github.com/dmbondaren/ecommerce-platform.git
@@ -17,7 +17,7 @@ cd ecommerce-platform
 docker compose up --build
 ```
 
-Open:
+After startup, the services are available at:
 
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:5000/api
@@ -25,18 +25,18 @@ Open:
 
 ## Local Admin
 
-On the first backend start, the app creates a local development super admin:
+On the first backend start, the application creates a local development super admin:
 
 ```text
 email: admin@admin-ch
 password: 123sp
 ```
 
-For a public server, override these values with environment variables before the first start:
+For deployment on a public server, these values must be overridden with environment variables before the first start:
 
 ```env
-SUPER_ADMIN_EMAIL=your-admin-email@example.com
-SUPER_ADMIN_PASSWORD=change-this-password
+SUPER_ADMIN_EMAIL=admin@example.com
+SUPER_ADMIN_PASSWORD=example-strong-password
 ```
 
 ## Data
@@ -49,7 +49,7 @@ Uploaded files are stored in:
 server/uploads
 ```
 
-Static UI images and icons are committed in:
+Static UI images and icons are stored in the repository under:
 
 ```text
 client/public/media
@@ -59,14 +59,13 @@ Installed dependencies such as `node_modules` are not committed. Docker installs
 
 ## Optional Email Setup
 
-SMTP is optional for local development. If SMTP variables are empty, the app skips sending emails and logs the outgoing message.
+SMTP is optional for local development. If the SMTP variables are empty, the application skips sending emails and logs the outgoing message instead.
 
-To enable real email sending, create local environment values or pass them to Docker:
+Real email sending is enabled by setting the following environment variables locally or passing them to Docker:
 
 ```env
-SMTP_HOST=smtp.gmail.com
+SMTP_HOST=smtp.example.com
 SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
+SMTP_USER=user@example.com
+SMTP_PASSWORD=example-app-password
 ```
-
