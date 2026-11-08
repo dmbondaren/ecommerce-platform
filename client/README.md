@@ -1,11 +1,11 @@
-# Клієнтська частина
+# Client
 
-Фронтенд маркетплейса працює на React і підключається до API сервера.
+The marketplace frontend is built with React and connects to the server API.
 
-## Команди
+## Commands
 
-`npm start` запускає сайт у режимі розробки на `http://localhost:3000`.
+`npm start` runs the app in development mode at `http://localhost:3000`.
 
-`npm run build` збирає статичну версію сайту.
+`npm run build` creates a production build of the app.
 
-`npm run test:unit:ci` запускає клієнтські тести без режиму очікування.
+`npm run test:unit:ci` runs the client tests once, without watch mode.
