@@ -70,4 +70,3 @@ SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
 ```
 
-Do not commit real SMTP passwords or production secrets to Git.
