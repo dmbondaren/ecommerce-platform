@@ -1,15 +1,15 @@
 /* ---------- Design tokens ---------- */
 :root {
   color-scheme: light dark;
-  --bg: #f6f6f3;
+  --bg: #f5f6fa;
   --surface: #ffffff;
-  --surface-2: #f0f1ee;
-  --text: #14181f;
-  --muted: #5d6673;
-  --border: #e2e4e1;
-  --accent: #0f766e;
-  --accent-hover: #0b5d57;
-  --accent-soft: #e2f3f0;
+  --surface-2: #eceef5;
+  --text: #151826;
+  --muted: #5b6275;
+  --border: #dfe2ec;
+  --accent: #4f46e5;
+  --accent-hover: #4038c7;
+  --accent-soft: #eceafe;
   --on-accent: #ffffff;
   --danger: #b42318;
   --danger-soft: #fdecea;
@@ -17,8 +17,8 @@
   --warn-soft: #fdf2df;
   --success: #12a150;
   --star: #e8a400;
-  --radius: 12px;
-  --radius-sm: 8px;
+  --radius: 16px;
+  --radius-sm: 10px;
   --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 4px 16px rgb(16 24 40 / 5%);
   --font: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
@@ -31,16 +31,16 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #0e1113;
-  --surface: #171b1e;
-  --surface-2: #1f2428;
-  --text: #e9ebee;
-  --muted: #9aa3ae;
-  --border: #2b3136;
-  --accent: #2cc4b3;
-  --accent-hover: #55d6c7;
-  --accent-soft: #12332f;
-  --on-accent: #03201c;
+  --bg: #0d0f17;
+  --surface: #161926;
+  --surface-2: #1f2333;
+  --text: #eceef6;
+  --muted: #9ba3b8;
+  --border: #2a2f42;
+  --accent: #8b8cf8;
+  --accent-hover: #a5a6fb;
+  --accent-soft: #23254a;
+  --on-accent: #0d0f17;
   --danger: #f97066;
   --danger-soft: #3a1512;
   --warn: #f5b75c;
@@ -51,16 +51,16 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --bg: #0e1113;
-    --surface: #171b1e;
-    --surface-2: #1f2428;
-    --text: #e9ebee;
-    --muted: #9aa3ae;
-    --border: #2b3136;
-    --accent: #2cc4b3;
-    --accent-hover: #55d6c7;
-    --accent-soft: #12332f;
-    --on-accent: #03201c;
+    --bg: #0d0f17;
+    --surface: #161926;
+    --surface-2: #1f2333;
+    --text: #eceef6;
+    --muted: #9ba3b8;
+    --border: #2a2f42;
+    --accent: #8b8cf8;
+    --accent-hover: #a5a6fb;
+    --accent-soft: #23254a;
+    --on-accent: #0d0f17;
     --danger: #f97066;
     --danger-soft: #3a1512;
     --warn: #f5b75c;
@@ -437,13 +437,23 @@ input[readonly] {
   justify-content: center;
   gap: 8px;
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
   transition:
-    background 0.12s,
-    border-color 0.12s;
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.1s;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
 }
 
 .btn:disabled {
@@ -463,11 +473,13 @@ input[readonly] {
 .btn-primary {
   background: var(--accent);
   color: var(--on-accent);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
   color: var(--on-accent);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .btn-secondary {
@@ -476,8 +488,8 @@ input[readonly] {
 }
 
 .btn-secondary:hover:not(:disabled) {
-  border-color: var(--muted);
-  color: inherit;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .btn-ghost {
@@ -644,14 +656,26 @@ input[readonly] {
   cursor: pointer;
 }
 
+.chip {
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    transform 0.1s;
+}
+
 .chip:hover {
-  border-color: var(--muted);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.chip:active {
+  transform: scale(0.96);
 }
 
 .chip.active {
-  background: var(--text);
-  border-color: var(--text);
-  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
 }
 
 .tabs {
@@ -702,8 +726,8 @@ input[readonly] {
 }
 
 .page.current {
-  background: var(--text);
-  color: var(--bg);
+  background: var(--accent);
+  color: var(--on-accent);
   font-weight: 700;
 }
 
@@ -821,6 +845,48 @@ input[readonly] {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
   gap: 10px;
+}
+
+.image-picker.file-over {
+  outline: 2px dashed var(--accent);
+  outline-offset: 6px;
+  border-radius: var(--radius-sm);
+}
+
+.image-picker figure {
+  cursor: grab;
+  transition:
+    transform 0.15s,
+    opacity 0.15s,
+    box-shadow 0.15s;
+}
+
+.image-picker figure:active {
+  cursor: grabbing;
+}
+
+/* The photo being moved fades; the one it would swap with lights up. */
+.image-picker figure.dragging {
+  opacity: 0.35;
+  transform: scale(0.94);
+}
+
+.image-picker figure.drop-target {
+  transform: scale(1.05);
+  box-shadow:
+    0 0 0 3px var(--accent),
+    0 10px 24px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.image-add {
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.image-add:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .image-picker figure,
@@ -959,11 +1025,28 @@ input[readonly] {
 .listing-card {
   position: relative;
   overflow: hidden;
-  transition: transform 0.12s;
+  transition:
+    transform 0.18s,
+    box-shadow 0.18s,
+    border-color 0.18s;
 }
 
 .listing-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  box-shadow: 0 12px 28px rgb(16 24 40 / 12%);
+}
+
+.listing-card-media img {
+  transition: transform 0.35s;
+}
+
+.listing-card:hover .listing-card-media img {
+  transform: scale(1.04);
+}
+
+.listing-card-media {
+  overflow: hidden;
 }
 
 .listing-card-media {
@@ -1047,8 +1130,23 @@ input[readonly] {
   cursor: pointer;
 }
 
+.favorite-btn {
+  transition: transform 0.15s;
+}
+
+.favorite-btn:hover {
+  transform: scale(1.12);
+}
+
 .favorite-btn.active {
   color: #d92d20;
+  animation: pop 0.25s;
+}
+
+@keyframes pop {
+  50% {
+    transform: scale(1.3);
+  }
 }
 
 .skeleton {
@@ -1549,6 +1647,72 @@ tbody tr {
   font-size: 0.85rem;
 }
 
+/* ---------- Theme switch ---------- */
+.theme-switch {
+  position: relative;
+  flex: none;
+  margin: 0 6px;
+  padding: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  touch-action: none;
+  transition: border-color 0.15s;
+}
+
+.theme-switch:hover {
+  border-color: var(--accent);
+}
+
+.theme-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  display: grid;
+  place-items: center;
+  /* Contrasts with the track in either theme: dark knob by day, white by night. */
+  background: #151826;
+  color: #ffd166;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 30%);
+  transition:
+    transform 0.25s cubic-bezier(0.3, 1.4, 0.5, 1),
+    background 0.2s,
+    color 0.2s;
+}
+
+.theme-switch[aria-checked='true'] .theme-switch-knob {
+  background: #ffffff;
+  color: #4f46e5;
+}
+
+/* While dragging the knob follows the pointer exactly. */
+.theme-switch.dragging .theme-switch-knob {
+  transition: none;
+  cursor: grabbing;
+}
+
+.theme-switch:active .theme-switch-knob {
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.theme-switch-hint {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.theme-switch-hint.sun {
+  left: 8px;
+}
+
+.theme-switch-hint.moon {
+  right: 8px;
+}
+
 /* ---------- Payment reminder ---------- */
 .pay-banner {
   position: sticky;
@@ -1732,6 +1896,12 @@ tbody tr {
 @media (max-width: 820px) {
   .brand-name {
     display: none;
+  }
+
+  /* Touch screens have no hover, so the lift would stick after a tap. */
+  .btn:hover:not(:disabled),
+  .listing-card:hover {
+    transform: none;
   }
 
   .header-inner {

@@ -23,7 +23,7 @@ export const escapeHtml = (value: string) =>
 /** Every dynamic value is escaped: listing titles and nicknames are user input. */
 export function renderMail(mail: Mail): string {
   const action = mail.action
-    ? `<p style="margin:28px 0"><a href="${escapeHtml(mail.action.url)}" style="background:#0f766e;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">${escapeHtml(mail.action.label)}</a></p>`
+    ? `<p style="margin:28px 0"><a href="${escapeHtml(mail.action.url)}" style="background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">${escapeHtml(mail.action.label)}</a></p>`
     : ''
   const details = mail.details?.length
     ? `<table style="margin:20px 0 0;border-collapse:collapse;width:100%">${mail.details

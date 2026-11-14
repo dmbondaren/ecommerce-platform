@@ -37,6 +37,14 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     })
     return
   }
-  logger.error({ err, method: req.method, path: req.path }, 'Unhandled error')
+  const schemaMismatch =
+    err instanceof Prisma.PrismaClientValidationError ||
+    (err instanceof Prisma.PrismaClientKnownRequestError && (err.code === 'P2021' || err.code === 'P2022'))
+  logger.error(
+    { err, method: req.method, path: req.path },
+    schemaMismatch
+      ? 'Database and code disagree about the schema. Stop the server and run "npm run db:push".'
+      : 'Unhandled error',
+  )
   res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Something went wrong on our side' } })
 }

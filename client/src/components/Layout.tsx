@@ -6,11 +6,11 @@ import { useAuth } from '../app/auth'
 import { useSavedListings } from '../app/hooks'
 import { keys } from '../app/queryClient'
 import { useRealtime } from '../app/realtime'
-import { useTheme } from '../app/theme'
 import { toast } from '../app/toast'
 import { ErrorBoundary } from './ErrorBoundary'
 import { Icon, type IconName } from './Icon'
 import { PaymentBanner } from './PaymentBanner'
+import { ThemeSwitch } from './ThemeSwitch'
 import { Avatar, Button } from './ui'
 
 function HeaderLink({ to, icon, label, count = 0 }: { to: string; icon: IconName; label: string; count?: number }) {
@@ -52,16 +52,6 @@ function SearchBox() {
         onChange={(event) => setDraft({ source: current, value: event.target.value })}
       />
     </form>
-  )
-}
-
-function ThemeToggle() {
-  const [theme, toggle] = useTheme()
-  const label = theme === 'dark' ? 'Switch to the light theme' : 'Switch to the dark theme'
-  return (
-    <button type="button" className="header-link" onClick={toggle} aria-label={label} title={label}>
-      <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={22} />
-    </button>
   )
 }
 
@@ -114,7 +104,7 @@ export function Layout() {
           </Link>
           <SearchBox />
           <nav className="header-nav" aria-label="Main">
-            <ThemeToggle />
+            <ThemeSwitch />
             {user ? (
               <>
                 {isStaff && <HeaderLink to="/admin" icon="shield" label="Administration" />}

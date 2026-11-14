@@ -2,14 +2,19 @@ import { MutationCache, QueryClient } from '@tanstack/react-query'
 import { ApiError, errorMessage } from '../api/client'
 import { toast } from './toast'
 
-/** Only failures that may go away by themselves are retried: no network, or a server error. */
-const isTransient = (error: unknown) => error instanceof ApiError && (error.status === 0 || error.status >= 500)
+/**
+ * Only failures that may go away by themselves are retried: no network, or a
+ * gateway that is restarting. A plain 500 is a bug and will fail again, so
+ * retrying it would only make the user wait longer for the error message.
+ */
+const isTransient = (error: unknown) => error instanceof ApiError && [0, 502, 503, 504].includes(error.status)
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
-      retry: (failures, error) => isTransient(error) && failures < 2,
+      retry: (failures, error) => isTransient(error) && failures < 1,
+      retryDelay: 600,
       refetchOnWindowFocus: false,
     },
   },

@@ -14,7 +14,7 @@ FROM deps AS dev
 ENV NODE_ENV=development
 COPY . .
 EXPOSE 5000
-CMD ["sh", "-c", "npm run db:push && npm run dev"]
+CMD ["npm", "run", "dev"]
 
 FROM deps AS build
 COPY . .

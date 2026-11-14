@@ -9,9 +9,25 @@ import { attachWebSocketServer } from './realtime/ws-server'
 
 const SHUTDOWN_TIMEOUT_MS = 10_000
 
+/**
+ * Touches the most recently added columns. When the database was not updated
+ * after a schema change every request would fail with a vague 500; this turns
+ * it into one clear message at start-up.
+ */
+async function assertSchemaIsCurrent() {
+  try {
+    await prisma.order.findFirst({ select: { status: true, expiresAt: true, paymentReference: true } })
+    await prisma.listing.findFirst({ where: { status: 'RESERVED' }, select: { latitude: true, longitude: true } })
+  } catch (err) {
+    logger.fatal({ err }, 'The database schema is out of date. Stop the server and run "npm run db:push".')
+    process.exit(1)
+  }
+}
+
 async function main() {
   // Fail at start-up, not on the first request, when the database is unreachable.
   await prisma.$connect()
+  await assertSchemaIsCurrent()
   await ensureCategories()
   await ensureSuperAdmin()
 

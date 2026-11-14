@@ -40,7 +40,7 @@ export function setTheme(theme: Theme) {
 media.addEventListener('change', apply)
 apply()
 
-export function useTheme(): [Theme, () => void] {
+export function useTheme(): [Theme, (theme?: Theme) => void] {
   const theme = useSyncExternalStore(
     (listener) => {
       listeners.add(listener)
@@ -48,5 +48,5 @@ export function useTheme(): [Theme, () => void] {
     },
     current,
   )
-  return [theme, () => setTheme(theme === 'dark' ? 'light' : 'dark')]
+  return [theme, (next) => setTheme(next ?? (theme === 'dark' ? 'light' : 'dark'))]
 }
