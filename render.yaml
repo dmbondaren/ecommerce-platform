@@ -1,11 +1,33 @@
+## Render blueprint: one free web service running the image from ./Dockerfile.
+## The database is a free Neon project; paste its connection string when
+## Render asks for DATABASE_URL.
+#services:
+#  - type: web
+#    name: marketplace
+#    runtime: docker
+#    plan: free
+#    dockerfilePath: ./Dockerfile
+#    healthCheckPath: /health
+#    envVars:
+#      - key: DATABASE_URL
+#        sync: false
+#      - key: JWT_ACCESS_SECRET
+#        generateValue: true
+#      # The free plan cannot send e-mail, so new accounts count as confirmed.
+#      - key: AUTO_VERIFY_EMAIL
+#        value: "true"
+#      - key: SEED_DEMO_DATA
+#        value: "true"
 # Render blueprint: one free web service running the image from ./Dockerfile.
 # The database is a free Neon project; paste its connection string when
 # Render asks for DATABASE_URL.
+
 services:
   - type: web
     name: marketplace
     runtime: docker
     plan: free
+    region: frankfurt
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
