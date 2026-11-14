@@ -1,0 +1,194 @@
+/** Shapes of the JSON the API returns. Dates arrive as ISO strings. */
+
+export type Role = 'USER' | 'ADMIN' | 'SUPER_ADMIN'
+export type Currency = 'CHF' | 'EUR' | 'USD' | 'UAH'
+export type ListingStatus = 'ACTIVE' | 'PENDING_REVIEW' | 'DEACTIVATED' | 'SOLD' | 'ARCHIVED'
+export type VoteType = 'LIKE' | 'DISLIKE'
+
+export interface PublicUser {
+  id: string
+  nickname: string
+  avatarUrl: string | null
+  isStaff: boolean
+  isVerified: boolean
+  memberSince: string
+}
+
+export interface Account extends PublicUser {
+  email: string
+  role: Role
+  phone: string | null
+  preferredCurrency: Currency
+}
+
+export interface AdminUser extends Account {
+  bannedUntil: string | null
+  bannedPermanently: boolean
+  banReason: string | null
+}
+
+export interface AdminUserDetail extends AdminUser {
+  stats: { listings: number; purchases: number; sales: number; reportsFiled: number; reportsReceived: number }
+}
+
+export interface Profile extends PublicUser {
+  stats: { rating: number | null; reviewCount: number; activeListings: number; sales: number }
+}
+
+export interface Session {
+  accessToken: string
+  user: Account
+}
+
+export interface Category {
+  id: number
+  slug: string
+  name: string
+}
+
+export interface Listing {
+  id: string
+  title: string
+  description: string
+  price: number
+  currency: Currency
+  location: string | null
+  phone: string | null
+  category: Category
+  status: ListingStatus
+  moderationReason: string | null
+  viewCount: number
+  imageUrls: string[]
+  owner: PublicUser
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ListingInput {
+  title: string
+  description: string
+  price: number
+  currency: Currency
+  categoryId: number
+  location: string
+  phone: string
+  imageUrls: string[]
+}
+
+export interface Page<T> {
+  items: T[]
+  page: number
+  pageSize: number
+  total: number
+  totalPages: number
+}
+
+export interface Order {
+  id: string
+  listingId: string | null
+  title: string
+  description: string
+  category: string
+  imageUrls: string[]
+  price: number
+  currency: Currency
+  buyer: PublicUser | null
+  seller: PublicUser | null
+  review: { id: string; rating: number } | null
+  createdAt: string
+}
+
+export interface ReviewReply {
+  id: string
+  body: string
+  author: PublicUser
+  createdAt: string
+}
+
+export interface VoteSummary {
+  likes: number
+  dislikes: number
+  myVote: VoteType | null
+}
+
+export interface Review extends VoteSummary {
+  id: string
+  rating: number
+  comment: string | null
+  pros: string | null
+  cons: string | null
+  author: PublicUser
+  item: { title: string; imageUrl: string | null; price: number; currency: Currency }
+  replies: ReviewReply[]
+  createdAt: string
+}
+
+export interface Conversation {
+  id: string
+  type: 'LISTING' | 'SUPPORT' | 'ADMIN_ROOM'
+  listing: { id: string; title: string; status: ListingStatus; imageUrl: string | null } | null
+  buyer: PublicUser | null
+  seller: PublicUser | null
+  lastMessage: { body: string; hasAttachment: boolean; senderId: string | null; createdAt: string } | null
+  lastMessageAt: string
+  unreadCount: number
+}
+
+export interface Message {
+  id: string
+  conversationId: string
+  sender: PublicUser | null
+  body: string
+  attachmentUrl: string | null
+  attachmentName: string | null
+  createdAt: string
+  editedAt: string | null
+  deleted: boolean
+}
+
+export interface MessagePage {
+  items: Message[]
+  hasMore: boolean
+}
+
+export interface Report {
+  id: string
+  message: string
+  attachmentUrls: string[]
+  status: 'OPEN' | 'RESOLVED'
+  listing: { id: string; title: string; status: ListingStatus }
+  reporter: PublicUser | null
+  createdAt: string
+  resolvedAt: string | null
+}
+
+export interface Notification {
+  id: string
+  message: string
+  link: string | null
+  readAt: string | null
+  createdAt: string
+}
+
+export interface AuditEntry {
+  id: string
+  action: string
+  targetType: string
+  targetId: string
+  reason: string | null
+  actor: PublicUser | null
+  createdAt: string
+}
+
+export interface UploadedFile {
+  url: string
+  name: string
+}
+
+/** Events pushed over the WebSocket. */
+export type ServerEvent =
+  | { type: 'message.created' | 'message.updated'; conversationId: string; message: Message }
+  | { type: 'conversation.read'; conversationId: string; userId: string; lastReadAt: string }
+  | { type: 'listing.changed'; listingId: string; status: string }
+  | { type: 'notification.created'; notification: Notification }
+  | { type: 'account.suspended' }

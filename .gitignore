@@ -1,14 +1,21 @@
-**/node_modules
-.idea
+node_modules
 dist
 build
+coverage
 .env
+.env.local
+*.log
+.idea
+.vscode
+.DS_Store
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Thesis documents and scratch folders kept next to the code
 tmp/
 .tmp/
 outputs/
 testing/
-server/uploads/*
-!server/uploads/.gitkeep
 *.doc
 *.docx
 *.ppt

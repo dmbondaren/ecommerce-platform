@@ -1,0 +1,385 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum AuthTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+enum ListingStatus {
+  ACTIVE
+  PENDING_REVIEW
+  DEACTIVATED
+  SOLD
+  ARCHIVED
+}
+
+enum ConversationType {
+  LISTING
+  SUPPORT
+  ADMIN_ROOM
+}
+
+enum VoteType {
+  LIKE
+  DISLIKE
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+}
+
+enum AuditAction {
+  LISTING_ACTIVATED
+  LISTING_DEACTIVATED
+  LISTING_REMOVED
+  USER_BANNED
+  USER_UNBANNED
+  USER_DELETED
+  ROLE_CHANGED
+  REPORT_RESOLVED
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  passwordHash      String
+  nickname          String    @unique
+  role              Role      @default(USER)
+  emailVerifiedAt   DateTime?
+  phone             String?
+  avatarUrl         String?
+  preferredCurrency String    @default("CHF") @db.VarChar(3)
+  bannedUntil       DateTime?
+  bannedPermanently Boolean   @default(false)
+  banReason         String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  refreshTokens         RefreshToken[]
+  authTokens            AuthToken[]
+  listings              Listing[]
+  favorites             Favorite[]
+  cartItems             CartItem[]
+  views                 ListingView[]
+  purchases             Order[]            @relation("OrderBuyer")
+  sales                 Order[]            @relation("OrderSeller")
+  reviewsWritten        Review[]           @relation("ReviewAuthor")
+  reviewsReceived       Review[]           @relation("ReviewSeller")
+  reviewVotes           ReviewVote[]
+  reviewReplies         ReviewReply[]
+  conversationsAsBuyer  Conversation[]     @relation("ConversationBuyer")
+  conversationsAsSeller Conversation[]     @relation("ConversationSeller")
+  messages              Message[]
+  conversationReads     ConversationRead[]
+  reports               Report[]           @relation("ReportReporter")
+  reportsResolved       Report[]           @relation("ReportResolver")
+  notifications         Notification[]
+  auditLogs             AuditLog[]
+}
+
+/// Opaque refresh tokens. Only the SHA-256 hash is stored, and every refresh
+/// rotates the token so a stolen one is detected on reuse.
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Single-use tokens sent by e-mail (verification, password reset).
+model AuthToken {
+  id        String        @id @default(cuid())
+  userId    String
+  type      AuthTokenType
+  tokenHash String        @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+}
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  slug      String    @unique
+  name      String
+  sortOrder Int       @default(0)
+  listings  Listing[]
+}
+
+model Listing {
+  id               String        @id @default(cuid())
+  ownerId          String
+  categoryId       Int
+  title            String        @db.VarChar(120)
+  description      String
+  price            Decimal       @db.Decimal(12, 2)
+  currency         String        @default("CHF") @db.VarChar(3)
+  location         String?
+  phone            String?
+  status           ListingStatus @default(ACTIVE)
+  moderationReason String?
+  viewCount        Int           @default(0)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  owner         User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  category      Category       @relation(fields: [categoryId], references: [id])
+  images        ListingImage[]
+  favorites     Favorite[]
+  cartItems     CartItem[]
+  views         ListingView[]
+  orders        Order[]
+  conversations Conversation[]
+  reports       Report[]
+
+  @@index([status, createdAt])
+  @@index([status, categoryId])
+  @@index([ownerId])
+}
+
+model ListingImage {
+  id        String @id @default(cuid())
+  listingId String
+  url       String
+  position  Int    @default(0)
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, position])
+}
+
+model Favorite {
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@id([userId, listingId])
+}
+
+model CartItem {
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@id([userId, listingId])
+}
+
+model ListingView {
+  userId    String
+  listingId String
+  viewedAt  DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@id([userId, listingId])
+  @@index([userId, viewedAt])
+}
+
+/// A completed purchase. Listing data is snapshotted so the order history
+/// stays intact when the listing is edited, removed or its owner is deleted.
+model Order {
+  id                  String   @id @default(cuid())
+  buyerId             String?
+  sellerId            String?
+  listingId           String?
+  price               Decimal  @db.Decimal(12, 2)
+  currency            String   @db.VarChar(3)
+  titleSnapshot       String
+  descriptionSnapshot String
+  categorySnapshot    String
+  imageUrlsSnapshot   String[]
+  createdAt           DateTime @default(now())
+
+  buyer   User?    @relation("OrderBuyer", fields: [buyerId], references: [id], onDelete: SetNull)
+  seller  User?    @relation("OrderSeller", fields: [sellerId], references: [id], onDelete: SetNull)
+  listing Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  review  Review?
+
+  @@index([buyerId, createdAt])
+  @@index([sellerId, createdAt])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  sellerId  String
+  authorId  String
+  rating    Int
+  comment   String?
+  pros      String?
+  cons      String?
+  createdAt DateTime @default(now())
+
+  order   Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  seller  User          @relation("ReviewSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  author  User          @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  votes   ReviewVote[]
+  replies ReviewReply[]
+
+  @@index([sellerId, createdAt])
+}
+
+model ReviewVote {
+  reviewId String
+  userId   String
+  type     VoteType
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([reviewId, userId])
+}
+
+model ReviewReply {
+  id        String   @id @default(cuid())
+  reviewId  String
+  userId    String
+  body      String
+  createdAt DateTime @default(now())
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId, createdAt])
+}
+
+/// `key` makes "get or create" race-free:
+///   listing:<listingId>:<buyerId> | support:<userId> | admin-room
+model Conversation {
+  id              String           @id @default(cuid())
+  key             String           @unique
+  type            ConversationType
+  listingId       String?
+  buyerId         String?
+  sellerId        String?
+  hiddenForBuyer  Boolean          @default(false)
+  hiddenForSeller Boolean          @default(false)
+  lastMessageAt   DateTime         @default(now())
+  createdAt       DateTime         @default(now())
+
+  listing  Listing?           @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  buyer    User?              @relation("ConversationBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  seller   User?              @relation("ConversationSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  messages Message[]
+  reads    ConversationRead[]
+
+  @@index([buyerId, lastMessageAt])
+  @@index([sellerId, lastMessageAt])
+  @@index([type, lastMessageAt])
+}
+
+model Message {
+  id             String    @id @default(cuid())
+  conversationId String
+  senderId       String?
+  body           String
+  attachmentUrl  String?
+  attachmentName String?
+  createdAt      DateTime  @default(now())
+  editedAt       DateTime?
+  deletedAt      DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User?        @relation(fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
+}
+
+/// Read position per participant. One row per (conversation, user) instead of a
+/// flag per message, which also works for rooms with more than two people.
+model ConversationRead {
+  conversationId String
+  userId         String
+  lastReadAt     DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+}
+
+model Report {
+  id             String       @id @default(cuid())
+  reporterId     String?
+  listingId      String
+  message        String
+  attachmentUrls String[]
+  status         ReportStatus @default(OPEN)
+  resolvedById   String?
+  resolvedAt     DateTime?
+  createdAt      DateTime     @default(now())
+
+  reporter   User?   @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  resolvedBy User?   @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  listing    Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([reporterId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  message   String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+/// Append-only record of moderation and administration actions.
+model AuditLog {
+  id         String      @id @default(cuid())
+  actorId    String?
+  action     AuditAction
+  targetType String
+  targetId   String
+  reason     String?
+  createdAt  DateTime    @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
+
+model SearchStat {
+  query          String   @id
+  count          Int      @default(1)
+  lastSearchedAt DateTime @default(now())
+
+  @@index([count])
+}
