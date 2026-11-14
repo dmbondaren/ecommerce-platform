@@ -108,6 +108,15 @@ Without SMTP settings the API logs e-mails instead of sending them, so the confi
 
 Everything in containers instead: `docker compose up --build`, then open http://localhost:5173.
 
+## Deploying
+
+The repository contains a single-image setup for a free hosted demo: `Dockerfile` builds the client and the API into one image, in which the API also serves the web client, and `render.yaml` describes it for [Render](https://render.com). The database is a free [Neon](https://neon.com) PostgreSQL project.
+
+1. Create a Neon project and copy its connection string.
+2. In Render choose **New → Blueprint**, pick this repository and paste the connection string as `DATABASE_URL`.
+
+In this mode uploaded images are kept in PostgreSQL (`STORAGE_DRIVER=database`), because the free plan has no persistent disk, and new accounts are confirmed without an e-mail (`AUTO_VERIFY_EMAIL=true`), because it cannot send mail. A free service sleeps after 15 minutes without visitors, so the first page load after a pause takes about a minute.
+
 ## Tests
 
 ```bash
@@ -140,7 +149,7 @@ Base path `/api/v1`. Authenticated requests carry `Authorization: Bearer <access
 
 - Payments are simulated: the buyer receives demo transfer details and confirms the payment by hand. There is no payment provider and no delivery integration.
 - The automatic moderation is rule-based; it holds listings back for a human rather than judging them.
-- Uploaded files are stored on the local disk; several API instances would need object storage and a shared event bus (e.g. Redis) for the WebSocket hub.
+- Uploaded files are stored on the local disk or, for the hosted demo, in PostgreSQL; several API instances would need object storage and a shared event bus (e.g. Redis) for the WebSocket hub.
 - Search uses `ILIKE`; PostgreSQL full-text search would be the next step for a large catalogue.
 
 ## Author

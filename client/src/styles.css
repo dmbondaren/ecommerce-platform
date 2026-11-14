@@ -1958,3 +1958,7 @@ tbody tr {
     opacity: 1;
   }
 }
+
+.map-link {
+  align-self: flex-start;
+}

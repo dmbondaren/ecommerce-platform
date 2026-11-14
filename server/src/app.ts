@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs'
+import path from 'node:path'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import express from 'express'
@@ -9,7 +11,7 @@ import { logger } from './lib/logger'
 import { prisma } from './lib/prisma'
 import { errorHandler, notFoundHandler } from './middleware/error-handler'
 import { apiLimiter } from './middleware/rate-limit'
-import { uploadDir } from './modules/uploads/uploads.routes'
+import { serveStoredFile, uploadDir } from './modules/uploads/uploads.routes'
 
 /** Builds the HTTP application without starting it, so tests can drive it directly. */
 export function createApp() {
@@ -19,14 +21,27 @@ export function createApp() {
   app.set('trust proxy', 1)
 
   app.use(pinoHttp({ logger, autoLogging: { ignore: (req) => req.url?.startsWith('/health') ?? false } }))
-  // Images are loaded by the web client from another origin.
-  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }))
+  app.use(
+    helmet({
+      // Images are loaded by the web client from another origin during development.
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      // Applies to the web client when this process serves it: map tiles and
+      // the address search are the only third parties the page may talk to.
+      contentSecurityPolicy: {
+        directives: {
+          'img-src': ["'self'", 'data:', 'blob:', 'https://tile.openstreetmap.org'],
+          'connect-src': ["'self'", 'ws:', 'wss:', 'https://nominatim.openstreetmap.org'],
+        },
+      },
+    }),
+  )
   app.use(cors({ origin: env.CLIENT_URL, credentials: true }))
   app.use(express.json({ limit: '100kb' }))
   app.use(cookieParser())
 
   // File names are random and never reused, so they can be cached forever.
-  app.use('/uploads', express.static(uploadDir, { index: false, maxAge: '365d', immutable: true }))
+  if (env.STORAGE_DRIVER === 'database') app.get('/uploads/:name', serveStoredFile)
+  else app.use('/uploads', express.static(uploadDir, { index: false, maxAge: '365d', immutable: true }))
 
   /** Liveness: the process is up. */
   app.get('/health', (_req, res) => {
@@ -45,6 +60,26 @@ export function createApp() {
   })
 
   app.use('/api/v1', apiLimiter, apiRouter)
+
+  // Single-service deployment: the same process serves the built web client.
+  const clientDir = env.CLIENT_DIST ? path.resolve(env.CLIENT_DIST) : null
+  if (clientDir && existsSync(path.join(clientDir, 'index.html'))) {
+    app.use(
+      express.static(clientDir, {
+        index: false,
+        setHeaders: (res, filePath) => {
+          // Vite puts a content hash into the names of everything under /assets.
+          const hashed = filePath.includes(`${path.sep}assets${path.sep}`)
+          res.setHeader('Cache-Control', hashed ? 'public, max-age=31536000, immutable' : 'no-cache')
+        },
+      }),
+    )
+    // Client-side routing: any other page address gets the application shell.
+    app.get(/^\/(?!api\/|uploads\/|health|ws$).*/, (_req, res) => {
+      res.setHeader('Cache-Control', 'no-cache')
+      res.sendFile(path.join(clientDir, 'index.html'))
+    })
+  }
   app.use(notFoundHandler)
   app.use(errorHandler)
   return app

@@ -158,7 +158,12 @@ function EditorForm({ listing }: { listing?: Listing }) {
         </Field>
       </div>
 
-      <LocationPicker address={form.location} value={form.coordinates} onChange={(value) => set('coordinates', value)} />
+      <LocationPicker
+        address={form.location}
+        value={form.coordinates}
+        onChange={(value) => set('coordinates', value)}
+        onAddressChange={(address) => set('location', address)}
+      />
       {errors.coordinates && <p className="field-error">{errors.coordinates.join('. ')}</p>}
 
       <div className="row">

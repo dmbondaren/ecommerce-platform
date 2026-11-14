@@ -1,5 +1,6 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 import type { Coordinates } from '../api/types'
+import { formatAddress, googleMapsUrl, type AddressParts } from '../lib/address'
 import { Button, Spinner } from './ui'
 
 // Leaflet is sizeable and only needed where a map is shown.
@@ -21,17 +22,53 @@ export async function geocode(address: string): Promise<Coordinates | null> {
   return Number.isFinite(position.lat) && Number.isFinite(position.lng) ? position : null
 }
 
+/** Finds the address of a point on the map, e.g. "Bahnhofstrasse 1, 8001 Zürich". */
+export async function reverseGeocode(position: Coordinates): Promise<string | null> {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&lat=${position.lat}&lon=${position.lng}`
+  const response = await fetch(url, { headers: { Accept: 'application/json' } })
+  if (!response.ok) return null
+  const result = (await response.json()) as { display_name?: string; address?: AddressParts }
+  return formatAddress(result.address, result.display_name) || null
+}
+
 interface Props {
   address: string
   value: Coordinates | null
   onChange: (value: Coordinates | null) => void
+  /** Called with the address of a spot the user picked on the map. */
+  onAddressChange: (address: string) => void
 }
 
 /** Optional map position of a listing: found from the address, or placed by hand. */
-export function LocationPicker({ address, value, onChange }: Props) {
+export function LocationPicker({ address, value, onChange, onAddressChange }: Props) {
   const [open, setOpen] = useState(value !== null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+
+  // Only the answer for the latest pick counts; earlier ones may arrive late.
+  const lastPick = useRef(0)
+
+  /** The flag was placed by hand: write the address of that spot into the listing. */
+  const pick = (position: Coordinates) => {
+    onChange(position)
+    const pickId = ++lastPick.current
+    setMessage('Looking up the address of this spot…')
+    reverseGeocode(position)
+      .then((found) => {
+        if (pickId !== lastPick.current) return
+        if (found) {
+          onAddressChange(found)
+          setMessage(`The location was set to “${found}”.`)
+        } else {
+          setMessage('No address was found for this spot, so the location text was left as it is.')
+        }
+      })
+      .catch(() => {
+        if (pickId === lastPick.current) setMessage('The address could not be looked up; please type it in yourself.')
+      })
+  }
+
+  const mapsUrl = googleMapsUrl(address, value)
 
   const find = async () => {
     if (!address.trim()) {
@@ -75,13 +112,18 @@ export function LocationPicker({ address, value, onChange }: Props) {
                 Remove the flag
               </Button>
             )}
+            {value && mapsUrl && (
+              <a className="btn btn-ghost btn-sm" href={mapsUrl} target="_blank" rel="noreferrer">
+                Check in Google Maps
+              </a>
+            )}
           </div>
           <p className="field-hint" aria-live="polite">
             {message ??
-              'Click on the map or drag the flag to adjust. Buyers will see this spot, so choose a nearby public place if you prefer not to show your home.'}
+              'Click on the map or drag the flag: the location above is filled in with the address of that spot. Buyers will see this spot, so choose a nearby public place if you prefer not to show your home.'}
           </p>
           <Suspense fallback={<Spinner label="Loading the map" />}>
-            <LazyMap position={value} onChange={onChange} />
+            <LazyMap position={value} onChange={pick} />
           </Suspense>
         </>
       )}

@@ -108,10 +108,13 @@ export const authService = {
         email: normalized,
         passwordHash: await hashPassword(password),
         nickname: await generateNickname(normalized),
+        emailVerifiedAt: env.AUTO_VERIFY_EMAIL ? new Date() : null,
       },
     })
-    const token = await createAuthToken(user.id, 'EMAIL_VERIFICATION', EMAIL_VERIFICATION_TTL_MS)
-    sendVerificationMail(user, token)
+    if (!env.AUTO_VERIFY_EMAIL) {
+      const token = await createAuthToken(user.id, 'EMAIL_VERIFICATION', EMAIL_VERIFICATION_TTL_MS)
+      sendVerificationMail(user, token)
+    }
     return issueSession(user, userAgent)
   },
 

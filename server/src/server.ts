@@ -2,6 +2,7 @@ import { createServer } from 'node:http'
 import { createApp } from './app'
 import { ensureCategories, ensureSuperAdmin } from './bootstrap'
 import { env } from './config/env'
+import { seedDemoData } from './demo-data'
 import { logger } from './lib/logger'
 import { prisma } from './lib/prisma'
 import { startReservationSweeper } from './modules/orders/orders.service'
@@ -30,6 +31,7 @@ async function main() {
   await assertSchemaIsCurrent()
   await ensureCategories()
   await ensureSuperAdmin()
+  if (env.SEED_DEMO_DATA) await seedDemoData()
 
   const server = createServer(createApp())
   const realtime = attachWebSocketServer(server)

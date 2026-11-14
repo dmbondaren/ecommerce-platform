@@ -1,60 +1,9 @@
-/**
- * Demo data for local development: `npm run db:seed`.
- * Safe to run repeatedly; it only adds what is missing.
- */
-import { ensureCategories } from '../src/bootstrap'
+/** Demo data for local development: `npm run db:seed`. */
+import { seedDemoData } from '../src/demo-data'
 import { logger } from '../src/lib/logger'
 import { prisma } from '../src/lib/prisma'
-import { hashPassword } from '../src/modules/auth/auth.service'
 
-const DEMO_PASSWORD = 'demo-password-123'
-
-const USERS = [
-  { email: 'anna@example.com', nickname: 'anna' },
-  { email: 'luca@example.com', nickname: 'luca' },
-  { email: 'mia@example.com', nickname: 'mia' },
-]
-
-const LISTINGS = [
-  { owner: 'anna', category: 'electronics', title: 'MacBook Air M2, 16 GB', price: 890, location: 'Zürich', description: 'Bought in 2023, battery at 94 %. Comes with the original charger and box.' },
-  { owner: 'anna', category: 'home-garden', title: 'Oak dining table, seats six', price: 320, location: 'Zürich', description: 'Solid oak, 180 x 90 cm. A few marks on the surface, otherwise in great shape.' },
-  { owner: 'anna', category: 'sports-hobbies', title: 'Road bike, 54 cm frame', price: 640, location: 'Winterthur', description: 'Aluminium frame with a carbon fork, Shimano 105 groupset, serviced this spring.' },
-  { owner: 'luca', category: 'electronics', title: 'Sony WH-1000XM5 headphones', price: 210, location: 'Bern', description: 'Noise cancelling headphones in black, used for six months, with case and cable.' },
-  { owner: 'luca', category: 'fashion', title: 'Wool winter coat, size M', price: 95, location: 'Bern', description: 'Dark grey wool coat, worn for one season. Dry cleaned and ready to wear.' },
-  { owner: 'luca', category: 'vehicles', title: 'Vespa Primavera 125', price: 2900, location: 'Basel', description: 'First owner, 8 400 km, always kept in a garage. Next inspection due in 2028.' },
-  { owner: 'mia', category: 'home-garden', title: 'Monstera plant, 1.2 m tall', price: 45, location: 'Luzern', description: 'Healthy and fast growing, comes in a ceramic pot. Pick-up only.' },
-  { owner: 'mia', category: 'services', title: 'German lessons for beginners', price: 40, location: 'Zürich', description: 'One-hour private lessons from A1 to B1, online or in person in the city centre.' },
-  { owner: 'mia', category: 'sports-hobbies', title: 'Fender acoustic guitar', price: 180, location: 'Luzern', description: 'Dreadnought body with a warm sound, new strings and a padded gig bag included.' },
-]
-
-async function main() {
-  await ensureCategories()
-  const passwordHash = await hashPassword(DEMO_PASSWORD)
-
-  for (const user of USERS) {
-    await prisma.user.upsert({
-      where: { email: user.email },
-      create: { ...user, passwordHash, emailVerifiedAt: new Date() },
-      update: {},
-    })
-  }
-
-  for (const { owner, category, ...listing } of LISTINGS) {
-    const exists = await prisma.listing.findFirst({ where: { title: listing.title, owner: { nickname: owner } } })
-    if (exists) continue
-    await prisma.listing.create({
-      data: {
-        ...listing,
-        currency: 'CHF',
-        owner: { connect: { nickname: owner } },
-        category: { connect: { slug: category } },
-      },
-    })
-  }
-  logger.info({ users: USERS.map((user) => user.email), password: DEMO_PASSWORD }, 'Demo data is ready')
-}
-
-main()
+seedDemoData()
   .catch((err: unknown) => {
     logger.error({ err }, 'Seeding failed')
     process.exitCode = 1

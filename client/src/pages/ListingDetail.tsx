@@ -12,6 +12,7 @@ import { Icon } from '../components/Icon'
 import { ListingImage } from '../components/ListingCard'
 import { LazyMap } from '../components/LocationPicker'
 import { Button, QueryView, Spinner, UserLink } from '../components/ui'
+import { googleMapsUrl } from '../lib/address'
 import { formatDate, formatPrice, STATUS_LABELS } from '../lib/format'
 
 function Gallery({ images, title }: { images: string[]; title: string }) {
@@ -228,6 +229,8 @@ function Actions({ listing }: { listing: Listing }) {
   )
 }
 
+const mapsUrl = (listing: Listing) => googleMapsUrl(listing.location, listing.coordinates)
+
 export function ListingDetail() {
   const { id = '' } = useParams()
   const { user } = useAuth()
@@ -295,6 +298,12 @@ export function ListingDetail() {
                   <LazyMap position={listing.coordinates} />
                 </Suspense>
               </>
+            )}
+            {mapsUrl(listing) && (
+              <a className="btn btn-secondary btn-md map-link" href={mapsUrl(listing) ?? undefined} target="_blank" rel="noreferrer">
+                <Icon name="pin" size={18} />
+                Open in Google Maps
+              </a>
             )}
           </section>
         </article>

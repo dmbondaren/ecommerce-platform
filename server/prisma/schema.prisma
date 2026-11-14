@@ -402,3 +402,12 @@ model SearchStat {
 
   @@index([count])
 }
+
+/// Uploaded images, for hosts without a persistent disk (STORAGE_DRIVER=database).
+/// Served under the same /uploads/<name> address as files on disk.
+model StoredFile {
+  name        String   @id
+  contentType String
+  data        Bytes
+  createdAt   DateTime @default(now())
+}
