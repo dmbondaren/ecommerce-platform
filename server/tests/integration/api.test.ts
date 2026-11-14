@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from '../../src/app'
 import { ensureCategories } from '../../src/bootstrap'
 import { prisma } from '../../src/lib/prisma'
+import { orderService } from '../../src/modules/orders/orders.service'
 
 const app = createApp()
 const api = '/api/v1'
@@ -105,7 +106,7 @@ describe('listings and checkout', () => {
     await request(app).get(`${api}/admin/users`).set(bearer(stranger.token)).expect(403)
   })
 
-  it('sells an item exactly once', async () => {
+  it('reserves an item for exactly one buyer and sells it on payment', async () => {
     const seller = await register('seller2@example.com')
     const buyer = await register('buyer@example.com')
     const rival = await register('rival@example.com')
@@ -124,13 +125,73 @@ describe('listings and checkout', () => {
     const winner = results[0]?.status === 201 ? buyer : rival
     const loser = winner === buyer ? rival : buyer
     const orderId = (await prisma.order.findFirstOrThrow({ where: { listingId: listingIds[0] } })).id
+    const review = (token: string) => request(app).post(`${api}/orders/${orderId}/review`).set(bearer(token))
 
-    await request(app).post(`${api}/orders/${orderId}/review`).set(bearer(loser.token)).send({ rating: 5 }).expect(404)
-    await request(app).post(`${api}/orders/${orderId}/review`).set(bearer(winner.token)).send({ rating: 5 }).expect(201)
-    await request(app).post(`${api}/orders/${orderId}/review`).set(bearer(winner.token)).send({ rating: 1 }).expect(409)
+    // Until it is paid the item is reserved: visible, not buyable, not reviewable.
+    const reserved = await request(app).get(`${api}/listings/${listingIds[0]}`).expect(200)
+    expect(reserved.body.status).toBe('RESERVED')
+    const availableOnly = await request(app).get(`${api}/listings`).query({ available: 1 }).expect(200)
+    expect(availableOnly.body.items.map((item: { id: string }) => item.id)).not.toContain(listingIds[0])
+    await review(winner.token).send({ rating: 5 }).expect(409)
+
+    await request(app).post(`${api}/orders/${orderId}/confirm-payment`).set(bearer(loser.token)).expect(404)
+    const paid = await request(app).post(`${api}/orders/${orderId}/confirm-payment`).set(bearer(winner.token)).expect(200)
+    expect(paid.body.status).toBe('PAID')
+    await request(app).post(`${api}/orders/${orderId}/confirm-payment`).set(bearer(winner.token)).expect(409)
+
+    await review(loser.token).send({ rating: 5 }).expect(404)
+    await review(winner.token).send({ rating: 5 }).expect(201)
+    await review(winner.token).send({ rating: 1 }).expect(409)
 
     const profile = await request(app).get(`${api}/users/${seller.id}`).expect(200)
     expect(profile.body.stats).toMatchObject({ rating: 5, reviewCount: 1, sales: 1 })
+  })
+})
+
+describe('reservations', () => {
+  it('releases an unpaid reservation when its time is up, and lets the buyer cancel', async () => {
+    const seller = await register('seller3@example.com')
+    const buyer = await register('buyer3@example.com')
+    const created = await request(app).post(`${api}/listings`).set(bearer(seller.token)).send(listingBody()).expect(201)
+    const id = created.body.id as string
+    const statusOf = async () => (await prisma.listing.findUniqueOrThrow({ where: { id } })).status
+
+    const first = await request(app).post(`${api}/orders`).set(bearer(buyer.token)).send({ listingIds: [id] }).expect(201)
+    expect(first.body[0].payment.reference).toMatch(/^MP-[A-Z0-9]+$/)
+    await request(app).post(`${api}/orders/${first.body[0].id}/cancel`).set(bearer(buyer.token)).expect(200)
+    expect(await statusOf()).toBe('ACTIVE')
+
+    const second = await request(app).post(`${api}/orders`).set(bearer(buyer.token)).send({ listingIds: [id] }).expect(201)
+    expect(await statusOf()).toBe('RESERVED')
+    expect(await orderService.expireOverdue(new Date(Date.now() + 60 * 60 * 1000))).toBeGreaterThanOrEqual(1)
+    expect(await statusOf()).toBe('ACTIVE')
+    await request(app).post(`${api}/orders/${second.body[0].id}/confirm-payment`).set(bearer(buyer.token)).expect(409)
+  })
+
+  it('holds a suspicious listing back for moderation', async () => {
+    const seller = await register('seller4@example.com')
+    const created = await request(app)
+      .post(`${api}/listings`)
+      .set(bearer(seller.token))
+      .send({ ...listingBody(), description: 'Payment in advance via Western Union only.' })
+      .expect(201)
+    expect(created.body.status).toBe('PENDING_REVIEW')
+    await request(app).get(`${api}/listings/${created.body.id}`).expect(404)
+  })
+
+  it('stores an optional map position', async () => {
+    const seller = await register('seller5@example.com')
+    const created = await request(app)
+      .post(`${api}/listings`)
+      .set(bearer(seller.token))
+      .send({ ...listingBody(), coordinates: { lat: 47.3769, lng: 8.5417 } })
+      .expect(201)
+    expect(created.body.coordinates).toEqual({ lat: 47.3769, lng: 8.5417 })
+    await request(app)
+      .post(`${api}/listings`)
+      .set(bearer(seller.token))
+      .send({ ...listingBody(), coordinates: { lat: 147, lng: 8 } })
+      .expect(400)
   })
 })
 

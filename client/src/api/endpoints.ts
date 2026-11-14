@@ -15,10 +15,12 @@ import type {
   Order,
   Page,
   Profile,
+  Purchase,
   Report,
   Review,
   ReviewReply,
   Role,
+  SalesSummary,
   Session,
   UploadedFile,
   VoteSummary,
@@ -57,13 +59,16 @@ export interface ListingFilters {
   category?: string
   minPrice?: string
   maxPrice?: string
+  /** Leave out listings that are reserved by a buyer. */
+  available?: boolean
   sort?: string
   page?: number
 }
 
 export const listingApi = {
   categories: () => api<Category[]>('/categories'),
-  search: (filters: ListingFilters) => api<Page<Listing>>('/listings', { query: { ...filters } }),
+  search: ({ available, ...filters }: ListingFilters) =>
+    api<Page<Listing>>('/listings', { query: { ...filters, available: available ? 1 : undefined } }),
   topSearches: () => api<string[]>('/listings/top-searches'),
   get: (id: string) => api<Listing>(`/listings/${id}`),
   create: (input: ListingInput) => post<Listing>('/listings', input),
@@ -89,8 +94,11 @@ export interface ReviewInput {
 }
 
 export const orderApi = {
-  checkout: (listingIds: string[]) => post<Order[]>('/orders', { listingIds }),
-  purchases: () => api<Order[]>('/me/purchases'),
+  checkout: (listingIds: string[]) => post<Purchase[]>('/orders', { listingIds }),
+  confirmPayment: (orderId: string) => post<Purchase>(`/orders/${orderId}/confirm-payment`),
+  cancel: (orderId: string) => post<Purchase>(`/orders/${orderId}/cancel`),
+  purchases: () => api<Purchase[]>('/me/purchases'),
+  salesSummary: () => api<SalesSummary>('/me/sales/summary'),
   sales: () => api<Order[]>('/me/sales'),
   review: (orderId: string, input: ReviewInput) => post<Review>(`/orders/${orderId}/review`, input),
 }

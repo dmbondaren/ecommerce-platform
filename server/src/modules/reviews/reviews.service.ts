@@ -67,6 +67,7 @@ export const reviewService = {
   async create(authorId: string, orderId: string, input: ReviewInput) {
     const order = await prisma.order.findUnique({ where: { id: orderId }, include: { review: { select: { id: true } } } })
     if (!order || order.buyerId !== authorId) throw notFound('Order')
+    if (order.status !== 'PAID') throw conflict('You can review a purchase once it is paid')
     if (!order.sellerId) throw conflict('The seller of this item no longer has an account')
     if (order.review) throw conflict('You have already reviewed this purchase')
 

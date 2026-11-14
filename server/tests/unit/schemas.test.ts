@@ -55,10 +55,16 @@ describe('phoneSchema', () => {
 describe('listingQuerySchema', () => {
   it('applies defaults and treats empty filters as absent', () => {
     expect(listingQuerySchema.parse({ minPrice: '', maxPrice: '' })).toEqual({
+      available: false,
       sort: 'newest',
       page: 1,
       pageSize: 24,
     })
+  })
+
+  it('reads the "available only" flag from the query string', () => {
+    expect(listingQuerySchema.parse({ available: '1' }).available).toBe(true)
+    expect(listingQuerySchema.parse({ available: '0' }).available).toBe(false)
   })
 
   it('caps the page size', () => {

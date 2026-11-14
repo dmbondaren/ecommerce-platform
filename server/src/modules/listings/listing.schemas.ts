@@ -32,6 +32,11 @@ export const listingInputSchema = z.object({
   location: z.string().trim().max(120).nullish().transform((value) => value || null),
   phone: phoneSchema.nullish().transform((value) => value ?? null),
   imageUrls: z.array(uploadUrlSchema).min(1, 'Add at least one photo').max(10),
+  /** Optional pin on the map. */
+  coordinates: z
+    .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) })
+    .nullish()
+    .transform((value) => value ?? null),
 })
 
 export type ListingInput = z.infer<typeof listingInputSchema>
@@ -49,6 +54,8 @@ export const listingQuerySchema = z.object({
   category: z.string().trim().max(64).optional(),
   minPrice: optionalNumber,
   maxPrice: optionalNumber,
+  /** `available=1` leaves out listings that are reserved by a buyer. */
+  available: z.preprocess((value) => value === '1' || value === 'true', z.boolean()),
   sort: z.enum(LISTING_SORTS).default('newest'),
   page: z.coerce.number().int().min(1).max(10_000).default(1),
   pageSize: z.coerce.number().int().min(1).max(48).default(24),

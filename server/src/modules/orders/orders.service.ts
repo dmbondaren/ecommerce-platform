@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client'
 import { env } from '../../config/env'
-import { conflict } from '../../lib/errors'
+import { randomToken } from '../../lib/crypto'
+import { conflict, notFound } from '../../lib/errors'
 import { logger } from '../../lib/logger'
 import { prisma } from '../../lib/prisma'
 import { mailer } from '../../mail/mailer'
@@ -8,6 +9,9 @@ import { hub } from '../../realtime/hub'
 import { listingInclude } from '../listings/listing.dto'
 import { notificationService } from '../notifications/notifications.service'
 import { publicUserSelect, toPublicUser } from '../users/user.dto'
+import { summarizeSales } from './sales-summary'
+
+const PAYMENT_WINDOW_MS = env.PAYMENT_WINDOW_MINUTES * 60_000
 
 const orderInclude = {
   buyer: { select: publicUserSelect },
@@ -26,58 +30,98 @@ export const toOrder = (order: OrderRow) => ({
   imageUrls: order.imageUrlsSnapshot,
   price: order.price.toNumber(),
   currency: order.currency,
+  status: order.status,
+  expiresAt: order.expiresAt,
+  paidAt: order.paidAt,
   buyer: order.buyer ? toPublicUser(order.buyer) : null,
   seller: order.seller ? toPublicUser(order.seller) : null,
   review: order.review,
   createdAt: order.createdAt,
 })
 
-function sendReceipts(buyerId: string, orders: OrderRow[]) {
-  const send = async () => {
-    const ids = [buyerId, ...orders.map((order) => order.sellerId)].filter((id): id is string => id !== null)
-    const users = await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, email: true } })
-    const emailOf = new Map(users.map((user) => [user.id, user.email]))
-    const buyerEmail = emailOf.get(buyerId)
-    for (const order of orders) {
-      const amount = `${order.price.toFixed(2)} ${order.currency}`
-      if (buyerEmail) {
-        await mailer.send({
-          to: buyerEmail,
-          subject: `Your purchase: ${order.titleSnapshot}`,
-          heading: 'Purchase confirmed',
-          body: `You bought "${order.titleSnapshot}" for ${amount}. Contact the seller in the chat to arrange the handover.`,
-          action: { label: 'View my purchases', url: `${env.CLIENT_URL}/account/purchases` },
-        })
-      }
-      const sellerEmail = order.sellerId ? emailOf.get(order.sellerId) : undefined
-      if (sellerEmail) {
-        await mailer.send({
-          to: sellerEmail,
-          subject: `Sold: ${order.titleSnapshot}`,
-          heading: 'Your listing was sold',
-          body: `"${order.titleSnapshot}" was bought for ${amount}. The buyer may contact you in the chat.`,
-          action: { label: 'View my sales', url: `${env.CLIENT_URL}/account/sales` },
-        })
-      }
-    }
-  }
-  send().catch((err: unknown) => logger.warn({ err }, 'Failed to send order e-mails'))
+/** What the buyer needs to make the transfer. Only ever sent to the buyer. */
+const paymentDetails = (order: OrderRow) => ({
+  recipient: env.PAYMENT_RECIPIENT,
+  iban: env.PAYMENT_IBAN,
+  reference: order.paymentReference,
+  amount: order.price.toNumber(),
+  currency: order.currency,
+})
+
+const toPurchase = (order: OrderRow) => ({
+  ...toOrder(order),
+  payment: order.status === 'PENDING_PAYMENT' ? paymentDetails(order) : null,
+})
+
+/** Short and unambiguous to type into a banking app, e.g. "MP-7K3F9QXA". */
+const newPaymentReference = () =>
+  `MP-${randomToken()
+    .replace(/[^A-Za-z0-9]/g, '')
+    .slice(0, 8)
+    .toUpperCase()}`
+
+const amountOf = (order: OrderRow) => `${order.price.toFixed(2)} ${order.currency}`
+
+async function emailOf(userId: string | null) {
+  if (!userId) return null
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+  return user?.email ?? null
 }
+
+/** E-mails are a side effect: failing to send one must not fail the order. */
+const inBackground = (what: string, task: () => Promise<void>) => {
+  task().catch((err: unknown) => logger.warn({ err }, `Failed to ${what}`))
+}
+
+function announce(order: Pick<OrderRow, 'id' | 'buyerId' | 'sellerId' | 'listingId'>, status: string, listingStatus: string) {
+  hub.toUsers([order.buyerId, order.sellerId], { type: 'order.updated', orderId: order.id, status })
+  if (order.listingId) hub.broadcast({ type: 'listing.changed', listingId: order.listingId, status: listingStatus })
+}
+
+function sendPaymentInstructions(buyerId: string, orders: OrderRow[]) {
+  inBackground('send payment instructions', async () => {
+    const to = await emailOf(buyerId)
+    if (!to) return
+    for (const order of orders) {
+      await mailer.send({
+        to,
+        subject: `Pay within ${env.PAYMENT_WINDOW_MINUTES} minutes: ${order.titleSnapshot}`,
+        heading: 'Your item is reserved',
+        body: `"${order.titleSnapshot}" is reserved for you for ${env.PAYMENT_WINDOW_MINUTES} minutes. Transfer the amount using the details below, then confirm the payment on the website. If the time runs out, the reservation is released and the item goes back on sale.`,
+        details: [
+          ['Amount', amountOf(order)],
+          ['Recipient', env.PAYMENT_RECIPIENT],
+          ['IBAN', env.PAYMENT_IBAN],
+          ['Reference', order.paymentReference ?? order.id],
+        ],
+        action: { label: 'I have paid', url: `${env.CLIENT_URL}/account/purchases` },
+      })
+    }
+  })
+}
+
+/** Puts a listing back on sale, unless something else happened to it in the meantime. */
+const releaseListing = (tx: Prisma.TransactionClient, listingId: string | null) =>
+  listingId
+    ? tx.listing.updateMany({ where: { id: listingId, status: 'RESERVED' }, data: { status: 'ACTIVE' } })
+    : Promise.resolve({ count: 0 })
 
 export const orderService = {
   /**
-   * Buys every listing in one transaction: either all of them are sold to
-   * this buyer or none is. The conditional update acts as the lock, so when
-   * two people buy the same item at the same moment exactly one succeeds.
+   * Reserves every listing for the buyer in one transaction: either all of
+   * them or none. The conditional update acts as the lock, so when two people
+   * buy the same item at the same moment exactly one succeeds. The buyer then
+   * has a limited time to pay; see `confirmPayment` and `expireOverdue`.
    */
   async checkout(buyerId: string, listingIds: string[]) {
     const ids = [...new Set(listingIds)]
+    const expiresAt = new Date(Date.now() + PAYMENT_WINDOW_MS)
     const orderIds = await prisma.$transaction(async (tx) => {
       const created: string[] = []
       for (const id of ids) {
         const claimed = await tx.listing.updateMany({
           where: { id, status: 'ACTIVE', ownerId: { not: buyerId } },
-          data: { status: 'SOLD' },
+          data: { status: 'RESERVED' },
         })
         if (claimed.count === 0) throw conflict('One of the listings is no longer available')
 
@@ -93,9 +137,12 @@ export const orderService = {
             descriptionSnapshot: listing.description,
             categorySnapshot: listing.category.name,
             imageUrlsSnapshot: listing.images.map((image) => image.url),
+            status: 'PENDING_PAYMENT',
+            paymentReference: newPaymentReference(),
+            expiresAt,
           },
         })
-        // The item is gone, so it leaves every cart, not only the buyer's.
+        // The item is spoken for, so it leaves every cart, not only the buyer's.
         await tx.cartItem.deleteMany({ where: { listingId: id } })
         created.push(order.id)
       }
@@ -104,17 +151,138 @@ export const orderService = {
 
     const orders = await prisma.order.findMany({ where: { id: { in: orderIds } }, include: orderInclude })
     for (const order of orders) {
-      if (order.listingId) hub.broadcast({ type: 'listing.changed', listingId: order.listingId, status: 'SOLD' })
+      announce(order, order.status, 'RESERVED')
       if (order.sellerId) {
         notificationService.notifyInBackground(
           order.sellerId,
-          `"${order.titleSnapshot}" was sold for ${order.price.toFixed(2)} ${order.currency}`,
+          `"${order.titleSnapshot}" is reserved: the buyer has ${env.PAYMENT_WINDOW_MINUTES} minutes to pay`,
           '/account/sales',
         )
       }
     }
-    sendReceipts(buyerId, orders)
-    return orders.map(toOrder)
+    sendPaymentInstructions(buyerId, orders)
+    return orders.map(toPurchase)
+  },
+
+  /**
+   * The buyer states that the transfer has been made, which completes the
+   * sale. There is no payment provider behind this: it models the manual
+   * confirmation step of a peer-to-peer trade.
+   */
+  async confirmPayment(buyerId: string, orderId: string) {
+    const now = new Date()
+    const order = await prisma.$transaction(async (tx) => {
+      // The deadline is part of the condition, so a late click cannot win
+      // against the job that expires reservations.
+      const paid = await tx.order.updateMany({
+        where: { id: orderId, buyerId, status: 'PENDING_PAYMENT', expiresAt: { gt: now } },
+        data: { status: 'PAID', paidAt: now },
+      })
+      if (paid.count === 0) {
+        const existing = await tx.order.findFirst({ where: { id: orderId, buyerId }, select: { status: true } })
+        if (!existing) throw notFound('Order')
+        throw conflict(
+          existing.status === 'PAID'
+            ? 'This order is already paid'
+            : 'The reservation has ended, so this order can no longer be paid',
+        )
+      }
+      const row = await tx.order.findUniqueOrThrow({ where: { id: orderId }, include: orderInclude })
+      if (row.listingId) {
+        await tx.listing.updateMany({ where: { id: row.listingId, status: 'RESERVED' }, data: { status: 'SOLD' } })
+      }
+      return row
+    })
+
+    announce(order, order.status, 'SOLD')
+    if (order.sellerId) {
+      notificationService.notifyInBackground(
+        order.sellerId,
+        `"${order.titleSnapshot}" was paid: ${amountOf(order)}. Arrange the handover with the buyer.`,
+        '/account/sales',
+      )
+    }
+    inBackground('send order e-mails', async () => {
+      const [buyerEmail, sellerEmail] = await Promise.all([emailOf(order.buyerId), emailOf(order.sellerId)])
+      if (buyerEmail) {
+        await mailer.send({
+          to: buyerEmail,
+          subject: `Payment confirmed: ${order.titleSnapshot}`,
+          heading: 'Thank you for your purchase',
+          body: `You confirmed the payment of ${amountOf(order)} for "${order.titleSnapshot}". Contact the seller in the chat to arrange the handover.`,
+          action: { label: 'View my purchases', url: `${env.CLIENT_URL}/account/purchases` },
+        })
+      }
+      if (sellerEmail) {
+        await mailer.send({
+          to: sellerEmail,
+          subject: `Sold: ${order.titleSnapshot}`,
+          heading: 'Your listing was sold',
+          body: `The buyer confirmed the payment of ${amountOf(order)} for "${order.titleSnapshot}" and may contact you in the chat.`,
+          action: { label: 'View my sales', url: `${env.CLIENT_URL}/account/sales` },
+        })
+      }
+    })
+    return toPurchase(order)
+  },
+
+  /** The buyer gives the reservation up, and the listing goes back on sale. */
+  async cancel(buyerId: string, orderId: string) {
+    const order = await prisma.$transaction(async (tx) => {
+      const cancelled = await tx.order.updateMany({
+        where: { id: orderId, buyerId, status: 'PENDING_PAYMENT' },
+        data: { status: 'CANCELLED' },
+      })
+      if (cancelled.count === 0) throw conflict('Only an unpaid reservation can be cancelled')
+      const row = await tx.order.findUniqueOrThrow({ where: { id: orderId }, include: orderInclude })
+      await releaseListing(tx, row.listingId)
+      return row
+    })
+    announce(order, order.status, 'ACTIVE')
+    if (order.sellerId) {
+      notificationService.notifyInBackground(
+        order.sellerId,
+        `The buyer cancelled the reservation of "${order.titleSnapshot}". It is on sale again.`,
+        '/account/listings',
+      )
+    }
+    return toPurchase(order)
+  },
+
+  /**
+   * Ends reservations whose time is up. Runs periodically; each order is
+   * expired with a conditional update, so running it twice, or at the same
+   * moment as a payment confirmation, is harmless.
+   */
+  async expireOverdue(now = new Date()) {
+    const overdue = await prisma.order.findMany({
+      where: { status: 'PENDING_PAYMENT', expiresAt: { lte: now } },
+      include: orderInclude,
+      take: 200,
+    })
+    let expiredCount = 0
+    for (const order of overdue) {
+      const expired = await prisma.$transaction(async (tx) => {
+        const result = await tx.order.updateMany({
+          where: { id: order.id, status: 'PENDING_PAYMENT' },
+          data: { status: 'EXPIRED' },
+        })
+        if (result.count === 0) return false
+        await releaseListing(tx, order.listingId)
+        return true
+      })
+      if (!expired) continue
+      expiredCount += 1
+      announce(order, 'EXPIRED', 'ACTIVE')
+      if (order.buyerId) {
+        notificationService.notifyInBackground(
+          order.buyerId,
+          `The reservation of "${order.titleSnapshot}" ended because it was not paid in time`,
+          order.listingId ? `/listings/${order.listingId}` : undefined,
+        )
+      }
+    }
+    return expiredCount
   },
 
   async purchases(userId: string) {
@@ -123,15 +291,40 @@ export const orderService = {
       include: orderInclude,
       orderBy: { createdAt: 'desc' },
     })
-    return rows.map(toOrder)
+    return rows.map(toPurchase)
   },
 
   async sales(userId: string) {
     const rows = await prisma.order.findMany({
-      where: { sellerId: userId },
+      // Reservations that fell through are noise for the seller.
+      where: { sellerId: userId, status: { in: ['PENDING_PAYMENT', 'PAID'] } },
       include: orderInclude,
       orderBy: { createdAt: 'desc' },
     })
     return rows.map(toOrder)
   },
+
+  async salesSummary(userId: string) {
+    const rows = await prisma.order.findMany({
+      where: { sellerId: userId, status: 'PAID' },
+      select: { price: true, currency: true, paidAt: true, createdAt: true },
+    })
+    return summarizeSales(
+      rows.map((row) => ({ price: row.price.toNumber(), currency: row.currency, paidAt: row.paidAt ?? row.createdAt })),
+    )
+  },
+}
+
+/** Starts the background job that releases unpaid reservations. Returns a function that stops it. */
+export function startReservationSweeper(intervalMs = 15_000) {
+  const timer = setInterval(() => {
+    orderService
+      .expireOverdue()
+      .then((count) => {
+        if (count > 0) logger.info({ count }, 'Released unpaid reservations')
+      })
+      .catch((err: unknown) => logger.error({ err }, 'Failed to release unpaid reservations'))
+  }, intervalMs)
+  timer.unref()
+  return () => clearInterval(timer)
 }

@@ -7,6 +7,8 @@ export interface Mail {
   subject: string
   heading: string
   body: string
+  /** Label/value pairs shown as a table, e.g. bank transfer details. */
+  details?: [label: string, value: string][]
   action?: { label: string; url: string }
 }
 
@@ -23,12 +25,21 @@ export function renderMail(mail: Mail): string {
   const action = mail.action
     ? `<p style="margin:28px 0"><a href="${escapeHtml(mail.action.url)}" style="background:#0f766e;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">${escapeHtml(mail.action.label)}</a></p>`
     : ''
+  const details = mail.details?.length
+    ? `<table style="margin:20px 0 0;border-collapse:collapse;width:100%">${mail.details
+        .map(
+          ([label, value]) =>
+            `<tr><td style="padding:6px 12px 6px 0;color:#44605a">${escapeHtml(label)}</td><td style="padding:6px 0;font-weight:600">${escapeHtml(value)}</td></tr>`,
+        )
+        .join('')}</table>`
+    : ''
   return `<!doctype html>
 <html lang="en">
   <body style="margin:0;background:#f4f6f5;font-family:Helvetica,Arial,sans-serif;color:#10231f">
     <div style="max-width:520px;margin:32px auto;background:#ffffff;border:1px solid #dfe7e4;border-radius:12px;padding:32px">
       <h1 style="margin:0 0 12px;font-size:22px">${escapeHtml(mail.heading)}</h1>
       <p style="margin:0;line-height:1.6;color:#44605a">${escapeHtml(mail.body)}</p>
+      ${details}
       ${action}
     </div>
   </body>
@@ -61,7 +72,7 @@ export const mailer = {
       to: mail.to,
       subject: mail.subject,
       html: renderMail(mail),
-      text: [mail.heading, mail.body, mail.action?.url].filter(Boolean).join('\n\n'),
+      text: [mail.heading, mail.body, ...(mail.details ?? []).map(([label, value]) => `${label}: ${value}`), mail.action?.url].filter(Boolean).join('\n\n'),
     })
   },
 }

@@ -15,6 +15,10 @@ const schema = z.object({
   ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(15),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
   UPLOAD_DIR: z.string().default('uploads'),
+  // Payments are simulated: buyers get these transfer details and confirm the payment themselves.
+  PAYMENT_RECIPIENT: z.string().default('Marketplace Escrow (demo)'),
+  PAYMENT_IBAN: z.string().default('CH93 0076 2011 6238 5295 7'),
+  PAYMENT_WINDOW_MINUTES: z.coerce.number().int().min(1).max(24 * 60).default(15),
   SMTP_HOST: optional(z.string()),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_USER: optional(z.string()),

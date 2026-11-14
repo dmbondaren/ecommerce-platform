@@ -140,7 +140,7 @@ export const conversationService = {
         where: { id: input.listingId },
         select: { id: true, ownerId: true, status: true },
       })
-      if (!listing || (listing.status !== 'ACTIVE' && listing.status !== 'SOLD')) throw notFound('Listing')
+      if (!listing || !['ACTIVE', 'RESERVED', 'SOLD'].includes(listing.status)) throw notFound('Listing')
       if (listing.ownerId === auth.userId) throw badRequest('This is your own listing')
       conversation = await prisma.conversation.upsert({
         where: { key: `listing:${listing.id}:${auth.userId}` },

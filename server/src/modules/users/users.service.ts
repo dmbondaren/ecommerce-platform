@@ -42,8 +42,8 @@ export const userService = {
     if (!user) throw notFound('User')
     const [reviews, activeListings, sales] = await Promise.all([
       prisma.review.aggregate({ where: { sellerId: id }, _avg: { rating: true }, _count: { _all: true } }),
-      prisma.listing.count({ where: { ownerId: id, status: 'ACTIVE' } }),
-      prisma.order.count({ where: { sellerId: id } }),
+      prisma.listing.count({ where: { ownerId: id, status: { in: ['ACTIVE', 'RESERVED'] } } }),
+      prisma.order.count({ where: { sellerId: id, status: 'PAID' } }),
     ])
     return {
       ...toPublicUser(user),

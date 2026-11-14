@@ -15,6 +15,7 @@ function handle(event: ServerEvent, logout: () => Promise<void>) {
       // `conversations` is a prefix of the message and unread keys too.
       void queryClient.invalidateQueries({ queryKey: keys.conversations })
       break
+    case 'order.updated':
     case 'listing.changed':
       void queryClient.invalidateQueries({ queryKey: keys.listings })
       void queryClient.invalidateQueries({ queryKey: ['me'] })

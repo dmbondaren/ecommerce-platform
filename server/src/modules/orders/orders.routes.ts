@@ -15,6 +15,14 @@ ordersRouter.post('/orders', requireAuth, async (req, res) => {
   res.status(201).json(await orderService.checkout(getAuth(req).userId, listingIds))
 })
 
+ordersRouter.post('/orders/:id/confirm-payment', requireAuth, async (req, res) => {
+  res.json(await orderService.confirmPayment(getAuth(req).userId, param(req, 'id')))
+})
+
+ordersRouter.post('/orders/:id/cancel', requireAuth, async (req, res) => {
+  res.json(await orderService.cancel(getAuth(req).userId, param(req, 'id')))
+})
+
 ordersRouter.post('/orders/:id/review', requireAuth, async (req, res) => {
   const input = parse(reviewInputSchema, req.body)
   res.status(201).json(await reviewService.create(getAuth(req).userId, param(req, 'id'), input))
@@ -22,6 +30,10 @@ ordersRouter.post('/orders/:id/review', requireAuth, async (req, res) => {
 
 ordersRouter.get('/me/purchases', requireAuth, async (req, res) => {
   res.json(await orderService.purchases(getAuth(req).userId))
+})
+
+ordersRouter.get('/me/sales/summary', requireAuth, async (req, res) => {
+  res.json(await orderService.salesSummary(getAuth(req).userId))
 })
 
 ordersRouter.get('/me/sales', requireAuth, async (req, res) => {

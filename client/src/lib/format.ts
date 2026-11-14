@@ -43,9 +43,27 @@ export const STATUS_LABELS: Record<string, string> = {
   ACTIVE: 'Active',
   PENDING_REVIEW: 'In review',
   DEACTIVATED: 'Taken down',
+  RESERVED: 'Reserved',
   SOLD: 'Sold',
   ARCHIVED: 'Archived',
 }
+
+export const ORDER_STATUS_LABELS: Record<string, string> = {
+  PENDING_PAYMENT: 'Awaiting payment',
+  PAID: 'Paid',
+  CANCELLED: 'Cancelled',
+  EXPIRED: 'Expired',
+}
+
+/** "14:05" for a countdown; never negative. */
+export function formatCountdown(milliseconds: number): string {
+  const seconds = Math.max(0, Math.ceil(milliseconds / 1000))
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+}
+
+/** "2026-11" -> "Nov". */
+export const formatMonth = (month: string) =>
+  new Intl.DateTimeFormat(LOCALE, { month: 'short', timeZone: 'UTC' }).format(new Date(`${month}-01T00:00:00Z`))
 
 /** Page numbers to show around the current page; `null` stands for a gap. */
 export function pageWindow(current: number, total: number, radius = 1): (number | null)[] {

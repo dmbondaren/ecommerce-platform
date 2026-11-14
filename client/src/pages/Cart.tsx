@@ -64,20 +64,20 @@ export function Cart() {
             </div>
             {confirming && (
               <ConfirmDialog
-                title="Confirm your purchase"
-                confirmLabel="Buy now"
+                title="Reserve and pay"
+                confirmLabel="Reserve now"
                 onClose={() => setConfirming(false)}
                 onConfirm={async () => {
                   await orderApi.checkout(items.map((item) => item.id))
                   await client.invalidateQueries()
-                  toast.success('Purchase confirmed. The sellers have been notified.')
+                  toast.success('Reserved for you. The payment details are in your e-mail and under “Purchases”.')
                   navigate('/account/purchases')
                 }}
               >
                 <p>
-                  The items are reserved for you at once; payment and handover are arranged directly with each
-                  seller. If one of them has just been sold to someone else, nothing is bought and you can review
-                  your cart.
+                  The items will be reserved for you for 15 minutes. You receive the transfer details by e-mail,
+                  pay, and confirm each one with “I have paid”. If one of them has just been taken by someone
+                  else, nothing is reserved and you can review your cart.
                 </p>
               </ConfirmDialog>
             )}

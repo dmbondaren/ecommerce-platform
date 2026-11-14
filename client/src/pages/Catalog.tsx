@@ -57,6 +57,7 @@ export function Catalog() {
     category: params.get('category') ?? '',
     minPrice: params.get('minPrice') ?? '',
     maxPrice: params.get('maxPrice') ?? '',
+    available: params.get('available') === '1',
     sort: params.get('sort') ?? 'newest',
     page: Math.max(1, Number(params.get('page')) || 1),
   }
@@ -81,7 +82,7 @@ export function Catalog() {
     placeholderData: keepPreviousData,
   })
   const saved = useSavedListings()
-  const hasFilters = Boolean(filters.q || filters.category || filters.minPrice || filters.maxPrice)
+  const hasFilters = Boolean(filters.q || filters.category || filters.minPrice || filters.maxPrice || filters.available)
 
   return (
     <>
@@ -128,6 +129,14 @@ export function Catalog() {
           max={filters.maxPrice}
           onApply={(minPrice, maxPrice) => update({ minPrice, maxPrice })}
         />
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={filters.available}
+            onChange={(event) => update({ available: event.target.checked ? '1' : '' })}
+          />
+          Hide reserved
+        </label>
         <div className="toolbar-end">
           {results.data && (
             <span className="muted" aria-live="polite">

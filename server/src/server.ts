@@ -4,6 +4,7 @@ import { ensureCategories, ensureSuperAdmin } from './bootstrap'
 import { env } from './config/env'
 import { logger } from './lib/logger'
 import { prisma } from './lib/prisma'
+import { startReservationSweeper } from './modules/orders/orders.service'
 import { attachWebSocketServer } from './realtime/ws-server'
 
 const SHUTDOWN_TIMEOUT_MS = 10_000
@@ -16,6 +17,7 @@ async function main() {
 
   const server = createServer(createApp())
   const realtime = attachWebSocketServer(server)
+  const stopSweeper = startReservationSweeper()
   server.listen(env.PORT, () => logger.info({ port: env.PORT, env: env.NODE_ENV }, 'API listening'))
 
   let shuttingDown = false
@@ -23,6 +25,7 @@ async function main() {
     if (shuttingDown) return
     shuttingDown = true
     logger.info({ signal }, 'Shutting down')
+    stopSweeper()
     realtime.close()
     // Stops accepting connections and waits for requests in flight.
     server.close(() => {

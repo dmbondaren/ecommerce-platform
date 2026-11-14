@@ -22,7 +22,7 @@ export function ListingImage({ src, alt }: { src: string | undefined | null; alt
 
 export function ListingCard({ listing, favorite = false, onToggleFavorite }: Props) {
   return (
-    <article className="card listing-card">
+    <article className={listing.status === 'ACTIVE' ? 'card listing-card' : 'card listing-card dimmed'}>
       <Link to={`/listings/${listing.id}`} className="listing-card-media" tabIndex={-1} aria-hidden="true">
         <ListingImage src={listing.imageUrls[0]} alt="" />
         {listing.status !== 'ACTIVE' && <span className="badge badge-overlay">{STATUS_LABELS[listing.status]}</span>}

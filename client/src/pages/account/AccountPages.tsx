@@ -1,15 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { accountApi, listingApi, orderApi } from '../../api/endpoints'
-import type { Listing, Order } from '../../api/types'
+import type { Listing, Order, Purchase } from '../../api/types'
 import { useDocumentTitle, useSavedListings } from '../../app/hooks'
 import { keys } from '../../app/queryClient'
 import { toast } from '../../app/toast'
 import { ConfirmDialog } from '../../components/dialogs'
 import { ListingGrid, ListingImage } from '../../components/ListingCard'
+import { isAwaitingPayment, PaymentDetailsDialog, useNow, usePaymentActions } from '../../components/PaymentBanner'
 import { Button, EmptyState, Field, FormError, Modal, QueryView, Stars, UserLink, fieldErrors } from '../../components/ui'
-import { formatDate, formatPrice, STATUS_LABELS, timeAgo } from '../../lib/format'
+import {
+  formatCountdown,
+  formatDate,
+  formatMonth,
+  formatPrice,
+  ORDER_STATUS_LABELS,
+  STATUS_LABELS,
+  timeAgo,
+} from '../../lib/format'
 
 const SECTIONS = [
   ['/account', 'Profile'],
@@ -78,7 +87,9 @@ export function MyListings() {
                 </div>
                 <span className={`badge status-${item.status.toLowerCase()}`}>{STATUS_LABELS[item.status]}</span>
                 <div className="row">
-                  {item.status === 'SOLD' ? (
+                  {item.status === 'RESERVED' ? (
+                    <span className="muted">Awaiting payment</span>
+                  ) : item.status === 'SOLD' ? (
                     <Button size="sm" busy={relist.isPending && relist.variables === item.id} onClick={() => relist.mutate(item.id)}>
                       List again
                     </Button>
@@ -87,7 +98,9 @@ export function MyListings() {
                       Edit
                     </Link>
                   )}
-                  <Button size="sm" variant="ghost" icon="trash" onClick={() => setDeleting(item)} aria-label={`Delete ${item.title}`} />
+                  {item.status !== 'RESERVED' && (
+                    <Button size="sm" variant="ghost" icon="trash" onClick={() => setDeleting(item)} aria-label={`Delete ${item.title}`} />
+                  )}
                 </div>
               </li>
             ))}
@@ -150,7 +163,7 @@ function ReviewDialog({ order, onClose }: { order: Order; onClose: () => void })
     mutationFn: () => orderApi.review(order.id, { rating, comment, pros, cons }),
     meta: { silent: true },
     onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ['me', 'purchases'] })
+      await client.invalidateQueries({ queryKey: keys.purchases })
       toast.success('Thank you for your review')
       onClose()
     },
@@ -188,63 +201,163 @@ function ReviewDialog({ order, onClose }: { order: Order; onClose: () => void })
   )
 }
 
-function OrderList({ orders, side }: { orders: Order[]; side: 'buyer' | 'seller' }) {
-  const [reviewing, setReviewing] = useState<Order | null>(null)
+function OrderRow({ order, children }: { order: Order; children: ReactNode }) {
   return (
-    <>
-      <ul className="rows card">
-        {orders.map((order) => (
-          <li key={order.id} className="row-item">
-            <span className="thumb">
-              <ListingImage src={order.imageUrls[0]} alt="" />
-            </span>
-            <div className="row-main">
-              {order.listingId ? <Link to={`/listings/${order.listingId}`}>{order.title}</Link> : <span>{order.title}</span>}
-              <span className="muted">
-                {formatDate(order.createdAt)} · {order.category}
-              </span>
-              <span className="inline">
-                <span className="muted">{side === 'buyer' ? 'Seller:' : 'Buyer:'}</span>
-                <UserLink user={side === 'buyer' ? order.seller : order.buyer} />
-              </span>
-            </div>
-            <strong>{formatPrice(order.price, order.currency)}</strong>
-            {order.review ? (
-              <Stars value={order.review.rating} />
-            ) : side === 'buyer' && order.seller ? (
-              <Button size="sm" onClick={() => setReviewing(order)}>
-                Leave a review
-              </Button>
-            ) : (
-              <span className="muted">No review yet</span>
-            )}
-          </li>
-        ))}
-      </ul>
-      {reviewing && <ReviewDialog order={reviewing} onClose={() => setReviewing(null)} />}
-    </>
+    <li className="row-item">
+      <span className="thumb">
+        <ListingImage src={order.imageUrls[0]} alt="" />
+      </span>
+      <div className="row-main">
+        {order.listingId ? <Link to={`/listings/${order.listingId}`}>{order.title}</Link> : <span>{order.title}</span>}
+        <span className="muted">
+          {formatDate(order.createdAt)} · {order.category}
+        </span>
+        {children}
+      </div>
+      <strong>{formatPrice(order.price, order.currency)}</strong>
+      <span className={`badge order-${order.status.toLowerCase()}`}>{ORDER_STATUS_LABELS[order.status]}</span>
+    </li>
   )
 }
 
 export function Purchases() {
-  const query = useQuery({ queryKey: ['me', 'purchases'], queryFn: orderApi.purchases })
+  const query = useQuery({ queryKey: keys.purchases, queryFn: orderApi.purchases })
+  const now = useNow(query.data?.some((order) => order.status === 'PENDING_PAYMENT') ?? false)
+  const { confirm, cancel } = usePaymentActions()
+  const [reviewing, setReviewing] = useState<Purchase | null>(null)
+  const [paying, setPaying] = useState<Purchase | null>(null)
+
   return (
     <>
       <h1>Purchases</h1>
       <QueryView query={query} empty={<EmptyState title="You have not bought anything yet" />}>
-        {(orders) => <OrderList orders={orders} side="buyer" />}
+        {(orders) => (
+          <ul className="rows card">
+            {orders.map((order) => (
+              <OrderRow key={order.id} order={order}>
+                <span className="inline">
+                  <span className="muted">Seller:</span>
+                  <UserLink user={order.seller} />
+                </span>
+                {isAwaitingPayment(order, now) && order.expiresAt ? (
+                  <div className="row">
+                    <span className="countdown">
+                      Pay within {formatCountdown(new Date(order.expiresAt).getTime() - now)}
+                    </span>
+                    <Button size="sm" onClick={() => setPaying(order)}>
+                      Payment details
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      busy={confirm.isPending && confirm.variables === order.id}
+                      onClick={() => confirm.mutate(order.id)}
+                    >
+                      I have paid
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      busy={cancel.isPending && cancel.variables === order.id}
+                      onClick={() => cancel.mutate(order.id)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : order.status === 'PAID' ? (
+                  order.review ? (
+                    <Stars value={order.review.rating} />
+                  ) : (
+                    order.seller && (
+                      <div className="row">
+                        <Button size="sm" onClick={() => setReviewing(order)}>
+                          Leave a review
+                        </Button>
+                      </div>
+                    )
+                  )
+                ) : (
+                  order.status !== 'PENDING_PAYMENT' && (
+                    <span className="muted">The reservation ended without a payment.</span>
+                  )
+                )}
+              </OrderRow>
+            ))}
+          </ul>
+        )}
       </QueryView>
+      {reviewing && <ReviewDialog order={reviewing} onClose={() => setReviewing(null)} />}
+      {paying && <PaymentDetailsDialog order={paying} onClose={() => setPaying(null)} />}
     </>
   )
 }
 
+function SalesAnalytics() {
+  const query = useQuery({ queryKey: [...keys.sales, 'summary'], queryFn: orderApi.salesSummary })
+  const summary = query.data
+  if (!summary || summary.totals.length === 0) return null
+  const currency = summary.monthlyCurrency ?? ''
+  const peak = Math.max(1, ...summary.monthly.map((entry) => entry.revenue))
+
+  return (
+    <section className="card analytics" aria-label="Sales analytics">
+      <dl className="stats">
+        {summary.totals.map((total) => (
+          <div key={total.currency}>
+            <dt>Revenue</dt>
+            <dd>{formatPrice(total.revenue, total.currency)}</dd>
+          </div>
+        ))}
+        <div>
+          <dt>Items sold</dt>
+          <dd>{summary.totals.reduce((sum, total) => sum + total.count, 0)}</dd>
+        </div>
+        {summary.averageOrderValue !== null && (
+          <div>
+            <dt>Average sale</dt>
+            <dd>{formatPrice(summary.averageOrderValue, currency)}</dd>
+          </div>
+        )}
+      </dl>
+      <figure className="chart">
+        <figcaption className="muted">Revenue per month, {currency}</figcaption>
+        <ol>
+          {summary.monthly.map((entry) => (
+            <li key={entry.month} title={`${formatPrice(entry.revenue, currency)} · ${entry.count} sold`}>
+              <span className="chart-value">{entry.revenue > 0 ? Math.round(entry.revenue) : ''}</span>
+              <span className="chart-bar" style={{ height: `${(entry.revenue / peak) * 100}%` }} />
+              <span className="chart-label">{formatMonth(entry.month)}</span>
+              <span className="sr-only">
+                : {formatPrice(entry.revenue, currency)}, {entry.count} sold
+              </span>
+            </li>
+          ))}
+        </ol>
+      </figure>
+    </section>
+  )
+}
+
 export function Sales() {
-  const query = useQuery({ queryKey: ['me', 'sales'], queryFn: orderApi.sales })
+  const query = useQuery({ queryKey: keys.sales, queryFn: orderApi.sales })
   return (
     <>
       <h1>Sales</h1>
+      <SalesAnalytics />
       <QueryView query={query} empty={<EmptyState title="You have not sold anything yet" />}>
-        {(orders) => <OrderList orders={orders} side="seller" />}
+        {(orders) => (
+          <ul className="rows card">
+            {orders.map((order) => (
+              <OrderRow key={order.id} order={order}>
+                <span className="inline">
+                  <span className="muted">Buyer:</span>
+                  <UserLink user={order.buyer} />
+                </span>
+                {order.review && <Stars value={order.review.rating} />}
+              </OrderRow>
+            ))}
+          </ul>
+        )}
       </QueryView>
     </>
   )

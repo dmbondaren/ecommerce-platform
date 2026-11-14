@@ -8,6 +8,7 @@ export type ServerEvent =
   | { type: 'message.updated'; conversationId: string; message: unknown }
   | { type: 'conversation.read'; conversationId: string; userId: string; lastReadAt: Date }
   | { type: 'listing.changed'; listingId: string; status: string }
+  | { type: 'order.updated'; orderId: string; status: string }
   | { type: 'notification.created'; notification: unknown }
   | { type: 'account.suspended' }
 

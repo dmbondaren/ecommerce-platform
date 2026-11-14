@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { adminApi, chatApi, listingApi, orderApi } from '../api/endpoints'
 import type { Listing } from '../api/types'
@@ -10,7 +10,8 @@ import { toast } from '../app/toast'
 import { ConfirmDialog, ReasonDialog } from '../components/dialogs'
 import { Icon } from '../components/Icon'
 import { ListingImage } from '../components/ListingCard'
-import { Button, QueryView, UserLink } from '../components/ui'
+import { LazyMap } from '../components/LocationPicker'
+import { Button, QueryView, Spinner, UserLink } from '../components/ui'
 import { formatDate, formatPrice, STATUS_LABELS } from '../lib/format'
 
 function Gallery({ images, title }: { images: string[]; title: string }) {
@@ -87,9 +88,11 @@ function Actions({ listing }: { listing: Listing }) {
               List again
             </Button>
           )}
-          <Button variant="danger" icon="trash" onClick={() => setDialog('delete')}>
-            Delete
-          </Button>
+          {listing.status !== 'RESERVED' && (
+            <Button variant="danger" icon="trash" onClick={() => setDialog('delete')}>
+              Delete
+            </Button>
+          )}
         </>
       ) : (
         <>
@@ -103,9 +106,11 @@ function Actions({ listing }: { listing: Listing }) {
               </Button>
             </>
           )}
-          <Button icon="chat" busy={message.isPending} onClick={() => requireLogin(() => message.mutate())}>
-            Message seller
-          </Button>
+          {listing.status !== 'ARCHIVED' && (
+            <Button icon="chat" busy={message.isPending} onClick={() => requireLogin(() => message.mutate())}>
+              {listing.status === 'RESERVED' ? 'Ask the seller' : 'Message seller'}
+            </Button>
+          )}
           <div className="row">
             <Button
               variant="ghost"
@@ -146,19 +151,20 @@ function Actions({ listing }: { listing: Listing }) {
 
       {dialog === 'buy' && (
         <ConfirmDialog
-          title="Confirm your purchase"
-          confirmLabel={`Buy for ${formatPrice(listing.price, listing.currency)}`}
+          title="Reserve and pay"
+          confirmLabel={`Reserve for ${formatPrice(listing.price, listing.currency)}`}
           onClose={() => setDialog(null)}
           onConfirm={async () => {
             await orderApi.checkout([listing.id])
             await client.invalidateQueries()
-            toast.success('Purchase confirmed. The seller has been notified.')
+            toast.success('Reserved for you. The payment details are in your e-mail and under “Purchases”.')
             navigate('/account/purchases')
           }}
         >
           <p>
-            You are buying <strong>{listing.title}</strong>. The item is reserved for you at once; payment and
-            handover are arranged directly with the seller.
+            <strong>{listing.title}</strong> will be reserved for you for 15 minutes. You receive the transfer
+            details by e-mail, pay, and confirm with “I have paid”. Without a confirmation in time the item goes
+            back on sale.
           </p>
         </ConfirmDialog>
       )}
@@ -237,12 +243,18 @@ export function ListingDetail() {
   return (
     <QueryView query={query}>
       {(listing) => (
-        <article className="detail">
+        <article className={listing.status === 'RESERVED' || listing.status === 'SOLD' ? 'detail dimmed' : 'detail'}>
           <Gallery key={listing.id} images={listing.imageUrls} title={listing.title} />
           <div className="detail-side">
             {listing.status !== 'ACTIVE' && (
-              <div className={listing.status === 'SOLD' ? 'notice' : 'notice notice-warn'} role="status">
+              <div
+                className={listing.status === 'SOLD' || listing.status === 'RESERVED' ? 'notice' : 'notice notice-warn'}
+                role="status"
+              >
                 <strong>{STATUS_LABELS[listing.status]}</strong>
+                {listing.status === 'RESERVED' && (
+                  <span> — a buyer is completing the payment. You can still ask the seller about it.</span>
+                )}
                 {listing.moderationReason && <span> — {listing.moderationReason}</span>}
               </div>
             )}
@@ -275,6 +287,15 @@ export function ListingDetail() {
           <section className="detail-description">
             <h2>Description</h2>
             <p className="prose">{listing.description}</p>
+            {listing.coordinates && (
+              <>
+                <h2>Where to find it</h2>
+                {listing.location && <p className="muted">{listing.location}</p>}
+                <Suspense fallback={<Spinner label="Loading the map" />}>
+                  <LazyMap position={listing.coordinates} />
+                </Suspense>
+              </>
+            )}
           </section>
         </article>
       )}

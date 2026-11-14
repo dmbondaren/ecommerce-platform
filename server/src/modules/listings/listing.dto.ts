@@ -17,6 +17,10 @@ export const toListing = (listing: ListingRow) => ({
   price: listing.price.toNumber(),
   currency: listing.currency,
   location: listing.location,
+  coordinates:
+    listing.latitude !== null && listing.longitude !== null
+      ? { lat: listing.latitude, lng: listing.longitude }
+      : null,
   phone: listing.phone,
   category: { id: listing.category.id, slug: listing.category.slug, name: listing.category.name },
   status: listing.status,

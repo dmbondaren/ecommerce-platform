@@ -2,7 +2,13 @@
 
 export type Role = 'USER' | 'ADMIN' | 'SUPER_ADMIN'
 export type Currency = 'CHF' | 'EUR' | 'USD' | 'UAH'
-export type ListingStatus = 'ACTIVE' | 'PENDING_REVIEW' | 'DEACTIVATED' | 'SOLD' | 'ARCHIVED'
+export type ListingStatus = 'ACTIVE' | 'PENDING_REVIEW' | 'DEACTIVATED' | 'RESERVED' | 'SOLD' | 'ARCHIVED'
+export type OrderStatus = 'PENDING_PAYMENT' | 'PAID' | 'CANCELLED' | 'EXPIRED'
+
+export interface Coordinates {
+  lat: number
+  lng: number
+}
 export type VoteType = 'LIKE' | 'DISLIKE'
 
 export interface PublicUser {
@@ -53,6 +59,7 @@ export interface Listing {
   price: number
   currency: Currency
   location: string | null
+  coordinates: Coordinates | null
   phone: string | null
   category: Category
   status: ListingStatus
@@ -73,6 +80,7 @@ export interface ListingInput {
   location: string
   phone: string
   imageUrls: string[]
+  coordinates: Coordinates | null
 }
 
 export interface Page<T> {
@@ -92,10 +100,34 @@ export interface Order {
   imageUrls: string[]
   price: number
   currency: Currency
+  status: OrderStatus
+  /** End of the payment window of a reservation. */
+  expiresAt: string | null
+  paidAt: string | null
   buyer: PublicUser | null
   seller: PublicUser | null
   review: { id: string; rating: number } | null
   createdAt: string
+}
+
+export interface PaymentDetails {
+  recipient: string
+  iban: string
+  reference: string | null
+  amount: number
+  currency: Currency
+}
+
+/** An order as its buyer sees it: unpaid ones carry the transfer details. */
+export interface Purchase extends Order {
+  payment: PaymentDetails | null
+}
+
+export interface SalesSummary {
+  totals: { currency: string; revenue: number; count: number }[]
+  monthly: { month: string; revenue: number; count: number }[]
+  monthlyCurrency: string | null
+  averageOrderValue: number | null
 }
 
 export interface ReviewReply {
@@ -190,5 +222,6 @@ export type ServerEvent =
   | { type: 'message.created' | 'message.updated'; conversationId: string; message: Message }
   | { type: 'conversation.read'; conversationId: string; userId: string; lastReadAt: string }
   | { type: 'listing.changed'; listingId: string; status: string }
+  | { type: 'order.updated'; orderId: string; status: string }
   | { type: 'notification.created'; notification: Notification }
   | { type: 'account.suspended' }

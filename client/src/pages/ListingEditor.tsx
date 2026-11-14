@@ -2,12 +2,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { listingApi } from '../api/endpoints'
-import type { Currency, Listing, ListingInput } from '../api/types'
+import type { Coordinates, Currency, Listing, ListingInput } from '../api/types'
 import { useAuth } from '../app/auth'
 import { useDocumentTitle } from '../app/hooks'
 import { keys } from '../app/queryClient'
 import { toast } from '../app/toast'
 import { ImagePicker } from '../components/ImagePicker'
+import { LocationPicker } from '../components/LocationPicker'
 import { Button, EmptyState, Field, FormError, PageHeader, QueryView, fieldErrors } from '../components/ui'
 
 const CURRENCIES: Currency[] = ['CHF', 'EUR', 'USD', 'UAH']
@@ -21,6 +22,7 @@ interface FormState {
   location: string
   phone: string
   imageUrls: string[]
+  coordinates: Coordinates | null
 }
 
 function EditorForm({ listing }: { listing?: Listing }) {
@@ -37,6 +39,7 @@ function EditorForm({ listing }: { listing?: Listing }) {
     location: listing?.location ?? '',
     phone: listing?.phone ?? user?.phone ?? '',
     imageUrls: listing?.imageUrls ?? [],
+    coordinates: listing?.coordinates ?? null,
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<unknown>(null)
@@ -154,6 +157,9 @@ function EditorForm({ listing }: { listing?: Listing }) {
           )}
         </Field>
       </div>
+
+      <LocationPicker address={form.location} value={form.coordinates} onChange={(value) => set('coordinates', value)} />
+      {errors.coordinates && <p className="field-error">{errors.coordinates.join('. ')}</p>}
 
       <div className="row">
         <Button type="submit" variant="primary" busy={busy}>

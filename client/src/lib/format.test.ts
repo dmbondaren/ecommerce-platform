@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatPrice, isSameDay, pageWindow, timeAgo } from './format'
+import { formatCountdown, formatMonth, formatPrice, isSameDay, pageWindow, timeAgo } from './format'
 
 describe('formatPrice', () => {
   it('drops the decimals of whole amounts and keeps real ones', () => {
@@ -44,5 +44,26 @@ describe('isSameDay', () => {
   it('compares calendar days, not 24-hour distance', () => {
     expect(isSameDay('2026-06-10T10:00:00', '2026-06-10T22:00:00')).toBe(true)
     expect(isSameDay('2026-06-10T22:00:00', '2026-06-11T02:00:00')).toBe(false)
+  })
+})
+
+describe('formatCountdown', () => {
+  it('shows minutes and zero-padded seconds, rounding up to the next second', () => {
+    expect(formatCountdown(15 * 60_000)).toBe('15:00')
+    expect(formatCountdown(61_000)).toBe('1:01')
+    expect(formatCountdown(59_001)).toBe('1:00')
+    expect(formatCountdown(900)).toBe('0:01')
+  })
+
+  it('stops at zero', () => {
+    expect(formatCountdown(0)).toBe('0:00')
+    expect(formatCountdown(-5000)).toBe('0:00')
+  })
+})
+
+describe('formatMonth', () => {
+  it('names the month regardless of the local time zone', () => {
+    expect(formatMonth('2026-11')).toBe('Nov')
+    expect(formatMonth('2026-01')).toBe('Jan')
   })
 })

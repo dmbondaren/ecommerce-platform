@@ -8,6 +8,7 @@ import { hub } from '../../realtime/hub'
 import { notificationService } from '../notifications/notifications.service'
 import { listingInclude, toListing } from './listing.dto'
 import type { ListingInput, ListingQuery } from './listing.schemas'
+import { screenListing } from './moderation'
 
 // `id` is the tie-breaker that keeps pages stable when the first key is equal.
 const ORDER_BY: Record<ListingQuery['sort'], Prisma.ListingOrderByWithRelationInput[]> = {
@@ -42,6 +43,23 @@ function trackSearch(rawQuery: string) {
     .catch((err: unknown) => logger.warn({ err }, 'Failed to record search statistics'))
 }
 
+/** Splits validated input into database columns. */
+function toColumns(input: ListingInput) {
+  const { imageUrls, coordinates, ...fields } = input
+  return {
+    imageUrls,
+    fields: { ...fields, latitude: coordinates?.lat ?? null, longitude: coordinates?.lng ?? null },
+  }
+}
+
+function notifyHeldForReview(ownerId: string, listingId: string, title: string, reason: string) {
+  notificationService.notifyInBackground(
+    ownerId,
+    `"${title}" is waiting for a moderator because it ${reason}. It will be published once approved.`,
+    `/listings/${listingId}`,
+  )
+}
+
 const announce = (listingId: string, status: string) =>
   hub.broadcast({ type: 'listing.changed', listingId, status })
 
@@ -51,7 +69,9 @@ export const listingService = {
   },
 
   async search(query: ListingQuery) {
-    const where: Prisma.ListingWhereInput = { status: 'ACTIVE' }
+    const where: Prisma.ListingWhereInput = {
+      status: query.available ? 'ACTIVE' : { in: ['ACTIVE', 'RESERVED'] },
+    }
     if (query.q) {
       where.OR = [
         { title: { contains: query.q, mode: 'insensitive' } },
@@ -82,11 +102,11 @@ export const listingService = {
     return rows.map((row) => row.query)
   },
 
-  /** Active and sold listings are public; everything else only to the owner and staff. */
+  /** Active, reserved and sold listings are public; everything else only to the owner and staff. */
   async getById(id: string, viewer?: AuthContext) {
     const listing = await prisma.listing.findUnique({ where: { id }, include: listingInclude })
     if (!listing) throw notFound('Listing')
-    const isPublic = listing.status === 'ACTIVE' || listing.status === 'SOLD'
+    const isPublic = ['ACTIVE', 'RESERVED', 'SOLD'].includes(listing.status)
     const isPrivileged = viewer !== undefined && (viewer.userId === listing.ownerId || isAdminRole(viewer.role))
     if (!isPublic && !isPrivileged) throw notFound('Listing')
     return toListing(listing)
@@ -94,7 +114,7 @@ export const listingService = {
 
   async byOwner(ownerId: string, options = { onlyActive: false }) {
     const rows = await prisma.listing.findMany({
-      where: { ownerId, status: options.onlyActive ? 'ACTIVE' : { not: 'ARCHIVED' } },
+      where: { ownerId, status: options.onlyActive ? { in: ['ACTIVE', 'RESERVED'] } : { not: 'ARCHIVED' } },
       include: listingInclude,
       orderBy: ORDER_BY.newest,
     })
@@ -103,15 +123,18 @@ export const listingService = {
 
   async create(ownerId: string, input: ListingInput) {
     await assertCategoryExists(input.categoryId)
-    const { imageUrls, ...fields } = input
+    const { imageUrls, fields } = toColumns(input)
+    const flag = screenListing(input.title, input.description)
     const listing = await prisma.listing.create({
       data: {
         ...fields,
         ownerId,
+        ...(flag ? { status: 'PENDING_REVIEW' as const, moderationReason: `Automatic check: ${flag}` } : {}),
         images: { create: imageUrls.map((url, position) => ({ url, position })) },
       },
       include: listingInclude,
     })
+    if (flag) notifyHeldForReview(ownerId, listing.id, listing.title, flag)
     announce(listing.id, listing.status)
     return toListing(listing)
   },
@@ -121,18 +144,26 @@ export const listingService = {
     if (current.status === 'SOLD' || current.status === 'ARCHIVED') {
       throw conflict('A sold listing cannot be edited')
     }
+    if (current.status === 'RESERVED') {
+      throw conflict('This listing is reserved by a buyer and cannot be edited until the payment is settled')
+    }
     await assertCategoryExists(input.categoryId)
-    const { imageUrls, ...fields } = input
+    const { imageUrls, fields } = toColumns(input)
+    const flag = screenListing(input.title, input.description)
+    const held = flag !== null || current.status === 'DEACTIVATED' || current.status === 'PENDING_REVIEW'
     const updated = await prisma.listing.update({
       where: { id },
       data: {
         ...fields,
-        // An edited listing that moderators took down goes back to them for review.
-        status: current.status === 'DEACTIVATED' ? 'PENDING_REVIEW' : current.status,
+        // An edited listing that moderators took down, or that the automatic
+        // check flags, goes to the moderators before it is shown again.
+        status: held ? 'PENDING_REVIEW' : current.status,
+        ...(flag ? { moderationReason: `Automatic check: ${flag}` } : {}),
         images: { deleteMany: {}, create: imageUrls.map((url, position) => ({ url, position })) },
       },
       include: listingInclude,
     })
+    if (flag) notifyHeldForReview(ownerId, id, updated.title, flag)
     announce(updated.id, updated.status)
 
     const priceDropped =
@@ -156,7 +187,10 @@ export const listingService = {
 
   /** Listings that were sold are archived instead of deleted so reports and chats keep their context. */
   async remove(ownerId: string, id: string) {
-    await findOwned(ownerId, id)
+    const current = await findOwned(ownerId, id)
+    if (current.status === 'RESERVED') {
+      throw conflict('This listing is reserved by a buyer and cannot be deleted until the payment is settled')
+    }
     await this.removeOrArchive(id)
   },
 

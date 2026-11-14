@@ -30,6 +30,8 @@ export const keys = {
   listing: (id: string) => ['listings', 'detail', id] as const,
   favorites: ['me', 'favorites'] as const,
   cart: ['me', 'cart'] as const,
+  purchases: ['me', 'purchases'] as const,
+  sales: ['me', 'sales'] as const,
   conversations: ['conversations'] as const,
   messages: (id: string) => ['conversations', id, 'messages'] as const,
   unread: ['conversations', 'unread'] as const,
