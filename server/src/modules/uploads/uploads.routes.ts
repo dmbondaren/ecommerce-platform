@@ -67,7 +67,11 @@ uploadsRouter.post('/', requireAuth, writeLimiter, upload.array('files', 10), as
   }
   const stored = files.map((file) => ({ file, name: newName(file.mimetype) }))
   await prisma.storedFile.createMany({
-    data: stored.map(({ file, name }) => ({ name, contentType: file.mimetype, data: file.buffer })),
+      data: stored.map(({ file, name }) => ({
+          name,
+          contentType: file.mimetype,
+          data: Uint8Array.from(file.buffer),
+      })),
   })
   res.status(201).json({
     files: stored.map(({ file, name }) => ({ url: `/uploads/${name}`, name: file.originalname })),
