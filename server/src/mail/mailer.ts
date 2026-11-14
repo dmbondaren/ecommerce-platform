@@ -59,9 +59,47 @@ function getTransporter(): Transporter | null {
   return transporter
 }
 
+/** "Marketplace <no-reply@example.com>" -> name and address. */
+export function parseSender(from: string): { name: string; email: string } {
+  const match = /^(.*)<([^>]+)>\s*$/.exec(from)
+  const name = match?.[1]?.trim().replace(/^"|"$/g, '')
+  return { name: name || 'Marketplace', email: (match?.[2] ?? from).trim() }
+}
+
+const textOf = (mail: Mail) =>
+  [mail.heading, mail.body, ...(mail.details ?? []).map(([label, value]) => `${label}: ${value}`), mail.action?.url]
+    .filter(Boolean)
+    .join('\n\n')
+
+/**
+ * Many hosts (Render's free plan among them) block outgoing SMTP ports, so
+ * the message is handed to the provider with an ordinary HTTPS request.
+ */
+async function sendViaBrevo(apiKey: string, mail: Mail): Promise<void> {
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: { 'api-key': apiKey, 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({
+      sender: parseSender(env.MAIL_FROM),
+      to: [{ email: mail.to }],
+      subject: mail.subject,
+      htmlContent: renderMail(mail),
+      textContent: textOf(mail),
+    }),
+    signal: AbortSignal.timeout(10_000),
+  })
+  if (!response.ok) {
+    throw new Error(`E-mail provider answered ${response.status}: ${(await response.text()).slice(0, 300)}`)
+  }
+}
+
 export const mailer = {
   /** Without SMTP settings the message is logged, which keeps local development self-contained. */
   async send(mail: Mail): Promise<void> {
+    if (env.BREVO_API_KEY) {
+      await sendViaBrevo(env.BREVO_API_KEY, mail)
+      return
+    }
     const transport = getTransporter()
     if (!transport) {
       logger.info({ to: mail.to, subject: mail.subject, action: mail.action?.url }, 'E-mail not sent (SMTP is not configured)')
@@ -72,7 +110,7 @@ export const mailer = {
       to: mail.to,
       subject: mail.subject,
       html: renderMail(mail),
-      text: [mail.heading, mail.body, ...(mail.details ?? []).map(([label, value]) => `${label}: ${value}`), mail.action?.url].filter(Boolean).join('\n\n'),
+      text: textOf(mail),
     })
   },
 }

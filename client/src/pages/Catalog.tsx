@@ -2,8 +2,11 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { listingApi } from '../api/endpoints'
-import { useDocumentTitle, useSavedListings } from '../app/hooks'
+import { useAuth } from '../app/auth'
+import { useDocumentTitle, useRequireLogin, useSavedListings } from '../app/hooks'
 import { keys } from '../app/queryClient'
+import { HomeAddressPrompt } from '../components/HomeAddress'
+import { Icon } from '../components/Icon'
 import { ListingGrid } from '../components/ListingCard'
 import { Button, EmptyState, ErrorState, Pagination } from '../components/ui'
 
@@ -14,6 +17,70 @@ const SORTS = [
   ['popular', 'Most viewed'],
   ['oldest', 'Oldest first'],
 ] as const
+
+const CURRENCIES = ['CHF', 'EUR', 'USD', 'UAH']
+const RADII = [1, 2, 5, 10, 20]
+
+/**
+ * "Near me": listings within a chosen distance of the user's home address.
+ * Someone without an address is offered to add one, and may decline.
+ */
+function NearbyFilter({ radius, onChange }: { radius: string; onChange: (radius: string) => void }) {
+  const { user } = useAuth()
+  const requireLogin = useRequireLogin()
+  const [open, setOpen] = useState(false)
+  const [asking, setAsking] = useState(false)
+  const active = radius !== ''
+
+  const toggle = () =>
+    requireLogin(() => {
+      if (!user?.homeCoordinates) setAsking(true)
+      else setOpen((current) => !current)
+    })
+
+  return (
+    <div className="nearby">
+      <button type="button" className={active ? 'nearby-btn active' : 'nearby-btn'} aria-expanded={open} onClick={toggle}>
+        <Icon name="pin" size={18} />
+        {active ? `Within ${radius} km` : 'Near me'}
+      </button>
+      {(open || active) && user?.homeCoordinates && (
+        <div className="chips nearby-options" role="group" aria-label="Distance from home">
+          {RADII.map((km) => (
+            <button
+              key={km}
+              type="button"
+              className={radius === String(km) ? 'chip active' : 'chip'}
+              aria-pressed={radius === String(km)}
+              onClick={() => onChange(String(km))}
+            >
+              {km} km
+            </button>
+          ))}
+          <button
+            type="button"
+            className="chip"
+            onClick={() => {
+              onChange('')
+              setOpen(false)
+            }}
+          >
+            Everywhere
+          </button>
+        </div>
+      )}
+      {asking && (
+        <HomeAddressPrompt
+          onClose={() => setAsking(false)}
+          onSaved={() => {
+            setAsking(false)
+            onChange('5')
+          }}
+        />
+      )}
+    </div>
+  )
+}
 
 function PriceFilter({ min, max, onApply }: { min: string; max: string; onApply: (min: string, max: string) => void }) {
   const [draft, setDraft] = useState({ min, max })
@@ -51,13 +118,15 @@ function PriceFilter({ min, max, onApply }: { min: string; max: string; onApply:
 
 /** The filters live in the URL, so a search can be shared, bookmarked and navigated with the back button. */
 export function Catalog() {
+  const { user } = useAuth()
   const [params, setParams] = useSearchParams()
   const filters = {
     q: params.get('q') ?? '',
     category: params.get('category') ?? '',
     minPrice: params.get('minPrice') ?? '',
     maxPrice: params.get('maxPrice') ?? '',
-    available: params.get('available') === '1',
+    currency: params.get('currency') ?? '',
+    radius: params.get('radius') ?? '',
     sort: params.get('sort') ?? 'newest',
     page: Math.max(1, Number(params.get('page')) || 1),
   }
@@ -75,29 +144,23 @@ export function Catalog() {
   }
 
   const categories = useQuery({ queryKey: keys.categories, queryFn: listingApi.categories, staleTime: Infinity })
-  const topSearches = useQuery({ queryKey: [...keys.listings, 'top'], queryFn: listingApi.topSearches })
   const results = useQuery({
-    queryKey: [...keys.listings, 'search', filters],
-    queryFn: () => listingApi.search(filters),
+    queryKey: [...keys.listings, 'search', filters, user?.homeCoordinates ?? null],
+    queryFn: () => {
+      const { radius, ...rest } = filters
+      // The distance filter needs a home address; a shared link opened by someone without one shows everything.
+      return listingApi.search({ ...rest, radiusKm: radius && user?.homeCoordinates ? Number(radius) : undefined })
+    },
     placeholderData: keepPreviousData,
   })
   const saved = useSavedListings()
-  const hasFilters = Boolean(filters.q || filters.category || filters.minPrice || filters.maxPrice || filters.available)
+  const hasFilters = Boolean(filters.q || filters.category || filters.minPrice || filters.maxPrice || filters.currency || filters.radius)
 
   return (
     <>
       <section className="hero">
         <h1>{filters.q ? `Results for “${filters.q}”` : 'Find it second-hand, close to home'}</h1>
-        {!filters.q && topSearches.data && topSearches.data.length > 0 && (
-          <p className="chips">
-            <span className="muted">Popular:</span>
-            {topSearches.data.map((term) => (
-              <button key={term} type="button" className="chip" onClick={() => update({ q: term })}>
-                {term}
-              </button>
-            ))}
-          </p>
-        )}
+        <NearbyFilter radius={user?.homeCoordinates ? filters.radius : ''} onChange={(radius) => update({ radius })} />
       </section>
 
       <div className="chips" role="group" aria-label="Category">
@@ -129,14 +192,16 @@ export function Catalog() {
           max={filters.maxPrice}
           onApply={(minPrice, maxPrice) => update({ minPrice, maxPrice })}
         />
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={filters.available}
-            onChange={(event) => update({ available: event.target.checked ? '1' : '' })}
-          />
-          Hide reserved
-        </label>
+        <select
+          aria-label="Currency"
+          value={filters.currency}
+          onChange={(event) => update({ currency: event.target.value })}
+        >
+          <option value="">Any currency</option>
+          {CURRENCIES.map((currency) => (
+            <option key={currency}>{currency}</option>
+          ))}
+        </select>
         <div className="toolbar-end">
           {results.data && (
             <span className="muted" aria-live="polite">

@@ -5,6 +5,7 @@ import { accountApi, uploadImages } from '../../api/endpoints'
 import type { Currency } from '../../api/types'
 import { useAuth } from '../../app/auth'
 import { toast } from '../../app/toast'
+import { HomeAddressSettings } from '../../components/HomeAddress'
 import { Avatar, Button, Field, FormError, fieldErrors } from '../../components/ui'
 
 const CURRENCIES: Currency[] = ['CHF', 'EUR', 'USD', 'UAH']
@@ -110,6 +111,8 @@ export function Settings() {
           </div>
         </form>
       </div>
+
+      <HomeAddressSettings />
 
       <div className="card form">
         <h2>Security</h2>

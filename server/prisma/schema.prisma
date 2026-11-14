@@ -72,6 +72,10 @@ model User {
   phone             String?
   avatarUrl         String?
   preferredCurrency String    @default("CHF") @db.VarChar(3)
+  /// Optional and private: only used to find listings near the user.
+  homeAddress       String?
+  homeLatitude      Float?
+  homeLongitude     Float?
   bannedUntil       DateTime?
   bannedPermanently Boolean   @default(false)
   banReason         String?

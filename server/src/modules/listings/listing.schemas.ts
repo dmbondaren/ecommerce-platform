@@ -54,6 +54,12 @@ export const listingQuerySchema = z.object({
   category: z.string().trim().max(64).optional(),
   minPrice: optionalNumber,
   maxPrice: optionalNumber,
+  currency: z.preprocess((value) => (value === '' ? undefined : value), z.enum(SUPPORTED_CURRENCIES).optional()),
+  /** Only listings with a map position at most this far from the signed-in user's home. */
+  radiusKm: z.preprocess(
+    (value) => (value === '' || value === undefined ? undefined : value),
+    z.coerce.number().min(0.1).max(100).optional(),
+  ),
   /** `available=1` leaves out listings that are reserved by a buyer. */
   available: z.preprocess((value) => value === '1' || value === 'true', z.boolean()),
   sort: z.enum(LISTING_SORTS).default('newest'),

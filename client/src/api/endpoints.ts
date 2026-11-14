@@ -6,6 +6,7 @@ import type {
   AuditEntry,
   Category,
   Conversation,
+  Coordinates,
   Currency,
   Listing,
   ListingInput,
@@ -45,6 +46,8 @@ export interface AccountPatch {
   phone?: string | null
   preferredCurrency?: Currency
   avatarUrl?: string | null
+  homeAddress?: string | null
+  homeCoordinates?: Coordinates | null
 }
 
 export const accountApi = {
@@ -59,16 +62,16 @@ export interface ListingFilters {
   category?: string
   minPrice?: string
   maxPrice?: string
-  /** Leave out listings that are reserved by a buyer. */
-  available?: boolean
+  currency?: string
+  /** Distance from the signed-in user's home address. */
+  radiusKm?: number
   sort?: string
   page?: number
 }
 
 export const listingApi = {
   categories: () => api<Category[]>('/categories'),
-  search: ({ available, ...filters }: ListingFilters) =>
-    api<Page<Listing>>('/listings', { query: { ...filters, available: available ? 1 : undefined } }),
+  search: (filters: ListingFilters) => api<Page<Listing>>('/listings', { query: { ...filters } }),
   topSearches: () => api<string[]>('/listings/top-searches'),
   get: (id: string) => api<Listing>(`/listings/${id}`),
   create: (input: ListingInput) => post<Listing>('/listings', input),

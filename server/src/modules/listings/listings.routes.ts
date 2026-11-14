@@ -11,8 +11,8 @@ listingsRouter.get('/categories', async (_req, res) => {
   res.json(await listingService.categories())
 })
 
-listingsRouter.get('/listings', async (req, res) => {
-  res.json(await listingService.search(parse(listingQuerySchema, req.query)))
+listingsRouter.get('/listings', optionalAuth, async (req, res) => {
+  res.json(await listingService.search(parse(listingQuerySchema, req.query), req.auth))
 })
 
 // Declared before "/listings/:id" so that it is not read as an id.

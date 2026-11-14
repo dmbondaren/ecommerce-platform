@@ -1962,3 +1962,65 @@ tbody tr {
 .map-link {
   align-self: flex-start;
 }
+
+/* ---------- Near me ---------- */
+.nearby {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.nearby-options {
+  margin-bottom: 0;
+}
+
+.nearby-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, var(--accent), #a855f7);
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent);
+  animation: glow 2.4s ease-in-out infinite;
+  transition: transform 0.12s;
+}
+
+.nearby-btn:hover {
+  transform: translateY(-1px) scale(1.03);
+}
+
+.nearby-btn:active {
+  transform: scale(0.97);
+}
+
+.nearby-btn.active {
+  animation: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+@keyframes glow {
+  0%,
+  100% {
+    box-shadow: 0 0 10px 0 color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+
+  50% {
+    box-shadow: 0 0 22px 5px color-mix(in srgb, #a855f7 55%, transparent);
+  }
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.toolbar > select {
+  margin-right: auto;
+}

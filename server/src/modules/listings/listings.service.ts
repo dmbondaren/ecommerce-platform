@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client'
-import { badRequest, conflict, notFound } from '../../lib/errors'
+import { badRequest, conflict, notFound, unauthorized } from '../../lib/errors'
 import { paginated } from '../../lib/http'
 import { logger } from '../../lib/logger'
 import { prisma } from '../../lib/prisma'
@@ -52,12 +52,41 @@ function toColumns(input: ListingInput) {
   }
 }
 
-function notifyHeldForReview(ownerId: string, listingId: string, title: string, reason: string) {
-  notificationService.notifyInBackground(
-    ownerId,
-    `"${title}" is waiting for a moderator because it ${reason}. It will be published once approved.`,
-    `/listings/${listingId}`,
-  )
+/**
+ * Ids of visible listings whose map position lies within `radiusKm` of a
+ * point, by great-circle distance (haversine formula, Earth radius 6371 km).
+ * LEAST/GREATEST keep rounding errors from pushing the argument of acos()
+ * outside [-1, 1].
+ */
+async function idsWithin(lat: number, lng: number, radiusKm: number): Promise<string[]> {
+  const rows = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT id FROM "Listing"
+    WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+      AND status IN ('ACTIVE', 'RESERVED')
+      AND 6371 * acos(LEAST(1, GREATEST(-1,
+            cos(radians(${lat}::float8)) * cos(radians(latitude)) * cos(radians(longitude) - radians(${lng}::float8))
+            + sin(radians(${lat}::float8)) * sin(radians(latitude))
+          ))) <= ${radiusKm}::float8
+    LIMIT 2000`
+  return rows.map((row) => row.id)
+}
+
+/**
+ * Publishing is never blocked by the automatic check: a flagged listing goes
+ * live at once and a report is filed for the moderators, who decide.
+ */
+async function reportToModerators(listingId: string, reason: string) {
+  try {
+    const open = await prisma.report.findFirst({
+      where: { listingId, reporterId: null, status: 'OPEN' },
+      select: { id: true },
+    })
+    if (!open) {
+      await prisma.report.create({ data: { listingId, message: `Automatic check: this listing ${reason}.` } })
+    }
+  } catch (err) {
+    logger.warn({ err, listingId }, 'Failed to file an automatic report')
+  }
 }
 
 const announce = (listingId: string, status: string) =>
@@ -68,7 +97,7 @@ export const listingService = {
     return prisma.category.findMany({ orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] })
   },
 
-  async search(query: ListingQuery) {
+  async search(query: ListingQuery, viewer?: AuthContext) {
     const where: Prisma.ListingWhereInput = {
       status: query.available ? 'ACTIVE' : { in: ['ACTIVE', 'RESERVED'] },
     }
@@ -79,6 +108,18 @@ export const listingService = {
       ]
     }
     if (query.category) where.category = { slug: query.category }
+    if (query.currency) where.currency = query.currency
+    if (query.radiusKm !== undefined) {
+      if (!viewer) throw unauthorized('Sign in to search near your home')
+      const home = await prisma.user.findUnique({
+        where: { id: viewer.userId },
+        select: { homeLatitude: true, homeLongitude: true },
+      })
+      if (!home || home.homeLatitude === null || home.homeLongitude === null) {
+        throw badRequest('Add your home address in your profile to search nearby')
+      }
+      where.id = { in: await idsWithin(home.homeLatitude, home.homeLongitude, query.radiusKm) }
+    }
     if (query.minPrice !== undefined || query.maxPrice !== undefined) {
       where.price = { gte: query.minPrice, lte: query.maxPrice }
     }
@@ -129,12 +170,11 @@ export const listingService = {
       data: {
         ...fields,
         ownerId,
-        ...(flag ? { status: 'PENDING_REVIEW' as const, moderationReason: `Automatic check: ${flag}` } : {}),
         images: { create: imageUrls.map((url, position) => ({ url, position })) },
       },
       include: listingInclude,
     })
-    if (flag) notifyHeldForReview(ownerId, listing.id, listing.title, flag)
+    if (flag) await reportToModerators(listing.id, flag)
     announce(listing.id, listing.status)
     return toListing(listing)
   },
@@ -150,20 +190,18 @@ export const listingService = {
     await assertCategoryExists(input.categoryId)
     const { imageUrls, fields } = toColumns(input)
     const flag = screenListing(input.title, input.description)
-    const held = flag !== null || current.status === 'DEACTIVATED' || current.status === 'PENDING_REVIEW'
+    const held = current.status === 'DEACTIVATED' || current.status === 'PENDING_REVIEW'
     const updated = await prisma.listing.update({
       where: { id },
       data: {
         ...fields,
-        // An edited listing that moderators took down, or that the automatic
-        // check flags, goes to the moderators before it is shown again.
+        // An edited listing that moderators took down goes back to them before it is shown again.
         status: held ? 'PENDING_REVIEW' : current.status,
-        ...(flag ? { moderationReason: `Automatic check: ${flag}` } : {}),
         images: { deleteMany: {}, create: imageUrls.map((url, position) => ({ url, position })) },
       },
       include: listingInclude,
     })
-    if (flag) notifyHeldForReview(ownerId, id, updated.title, flag)
+    if (flag) await reportToModerators(id, flag)
     announce(updated.id, updated.status)
 
     const priceDropped =

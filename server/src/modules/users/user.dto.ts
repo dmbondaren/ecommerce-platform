@@ -31,6 +31,12 @@ export const toAccount = (user: User) => ({
   role: user.role,
   phone: user.phone,
   preferredCurrency: user.preferredCurrency,
+  // Private: never part of the public profile.
+  homeAddress: user.homeAddress,
+  homeCoordinates:
+    user.homeLatitude !== null && user.homeLongitude !== null
+      ? { lat: user.homeLatitude, lng: user.homeLongitude }
+      : null,
 })
 
 /** What administrators see: the account plus moderation state. */

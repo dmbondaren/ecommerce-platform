@@ -10,7 +10,8 @@ It started as my bachelor's thesis (Express + Sequelize + MySQL, one 1 000-line 
 
 **Buying and selling**
 - Listings with up to ten photos, categories, price in CHF / EUR / USD / UAH
-- Search with filters, sorting and pagination; the state lives in the URL, so a search can be shared
+- Search with filters (category, price, currency), sorting and pagination; the state lives in the URL, so a search can be shared
+- “Near me”: listings within 1–20 km of the user's home address, which is optional and never shown to others
 - Favourites, cart, browsing history, notifications when a saved item gets cheaper
 - Checkout that reserves an item for exactly one buyer, even when two people buy at the same moment
 - Simulated payment in the style of a peer-to-peer trade: transfer details by e-mail, a 15-minute countdown, an “I have paid” confirmation, and automatic release of unpaid reservations
@@ -25,7 +26,7 @@ It started as my bachelor's thesis (Express + Sequelize + MySQL, one 1 000-line 
 
 **Moderation**
 - Roles: user, admin, super admin
-- Automatic screening of new and edited listings (prohibited items, off-platform payment requests, link spam); flagged ones wait for a moderator
+- Automatic screening of new and edited listings (prohibited items, off-platform payment requests, link spam); a flagged listing is published like any other and reported to the moderators
 - Reports, a moderation queue, temporary and permanent suspensions
 - An audit log of every moderation action
 
@@ -115,7 +116,7 @@ The repository contains a single-image setup for a free hosted demo: `Dockerfile
 1. Create a Neon project and copy its connection string.
 2. In Render choose **New → Blueprint**, pick this repository and paste the connection string as `DATABASE_URL`.
 
-In this mode uploaded images are kept in PostgreSQL (`STORAGE_DRIVER=database`), because the free plan has no persistent disk, and new accounts are confirmed without an e-mail (`AUTO_VERIFY_EMAIL=true`), because it cannot send mail. A free service sleeps after 15 minutes without visitors, so the first page load after a pause takes about a minute.
+In this mode uploaded images are kept in PostgreSQL (`STORAGE_DRIVER=database`), because the free plan has no persistent disk, and new accounts are confirmed without an e-mail (`AUTO_VERIFY_EMAIL=true`). The free plan blocks SMTP ports; to send e-mail anyway, set `BREVO_API_KEY` and a verified `MAIL_FROM`, and messages go out over Brevo's HTTPS API. A free service sleeps after 15 minutes without visitors, so the first page load after a pause takes about a minute.
 
 ## Tests
 
@@ -148,7 +149,7 @@ Base path `/api/v1`. Authenticated requests carry `Authorization: Bearer <access
 ## Known limitations
 
 - Payments are simulated: the buyer receives demo transfer details and confirms the payment by hand. There is no payment provider and no delivery integration.
-- The automatic moderation is rule-based; it holds listings back for a human rather than judging them.
+- The automatic moderation is rule-based; it reports listings to a human rather than judging them.
 - Uploaded files are stored on the local disk or, for the hosted demo, in PostgreSQL; several API instances would need object storage and a shared event bus (e.g. Redis) for the WebSocket hub.
 - Search uses `ILIKE`; PostgreSQL full-text search would be the next step for a large catalogue.
 

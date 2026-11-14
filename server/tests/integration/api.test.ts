@@ -168,15 +168,18 @@ describe('reservations', () => {
     await request(app).post(`${api}/orders/${second.body[0].id}/confirm-payment`).set(bearer(buyer.token)).expect(409)
   })
 
-  it('holds a suspicious listing back for moderation', async () => {
+  it('publishes a suspicious listing at once and reports it to the moderators', async () => {
     const seller = await register('seller4@example.com')
     const created = await request(app)
       .post(`${api}/listings`)
       .set(bearer(seller.token))
       .send({ ...listingBody(), description: 'Payment in advance via Western Union only.' })
       .expect(201)
-    expect(created.body.status).toBe('PENDING_REVIEW')
-    await request(app).get(`${api}/listings/${created.body.id}`).expect(404)
+    expect(created.body.status).toBe('ACTIVE')
+    await request(app).get(`${api}/listings/${created.body.id}`).expect(200)
+    const reports = await prisma.report.findMany({ where: { listingId: created.body.id as string } })
+    expect(reports).toHaveLength(1)
+    expect(reports[0]).toMatchObject({ reporterId: null, status: 'OPEN' })
   })
 
   it('stores an optional map position', async () => {
@@ -192,6 +195,43 @@ describe('reservations', () => {
       .set(bearer(seller.token))
       .send({ ...listingBody(), coordinates: { lat: 147, lng: 8 } })
       .expect(400)
+  })
+})
+
+describe('search filters', () => {
+  it('filters by currency and by distance from the home address', async () => {
+    const seller = await register('seller6@example.com')
+    const buyer = await register('buyer6@example.com')
+    const post = (body: object) =>
+      request(app).post(`${api}/listings`).set(bearer(seller.token)).send({ ...listingBody(), ...body }).expect(201)
+    // Zürich main station, and Bern about 95 km away.
+    const near = await post({ title: 'Nearby lamp', currency: 'EUR', coordinates: { lat: 47.3779, lng: 8.5403 } })
+    const far = await post({ title: 'Faraway lamp', currency: 'EUR', coordinates: { lat: 46.948, lng: 7.4474 } })
+    const ids = (response: { body: { items: { id: string }[] } }) => response.body.items.map((item) => item.id)
+
+    const euros = await request(app).get(`${api}/listings`).query({ currency: 'EUR', q: 'lamp' }).expect(200)
+    expect(ids(euros).sort()).toEqual([near.body.id, far.body.id].sort())
+    const francs = await request(app).get(`${api}/listings`).query({ currency: 'CHF', q: 'lamp' }).expect(200)
+    expect(ids(francs)).toEqual([])
+
+    const nearby = () => request(app).get(`${api}/listings`).query({ radiusKm: 5, q: 'lamp' })
+    await nearby().expect(401)
+    await nearby().set(bearer(buyer.token)).expect(400)
+
+    // Home at Zürich Paradeplatz, roughly 900 m from the station.
+    const account = await request(app)
+      .patch(`${api}/me`)
+      .set(bearer(buyer.token))
+      .send({ homeAddress: 'Paradeplatz, 8001 Zürich', homeCoordinates: { lat: 47.3697, lng: 8.5392 } })
+      .expect(200)
+    expect(account.body.homeCoordinates).toEqual({ lat: 47.3697, lng: 8.5392 })
+    expect(ids(await nearby().set(bearer(buyer.token)).expect(200))).toEqual([near.body.id])
+    const wide = await request(app).get(`${api}/listings`).query({ radiusKm: 100, q: 'lamp' }).set(bearer(buyer.token))
+    expect(ids(wide).sort()).toEqual([near.body.id, far.body.id].sort())
+
+    const profile = await request(app).get(`${api}/users/${buyer.id}`).expect(200)
+    expect(profile.body).not.toHaveProperty('homeAddress')
+    expect(profile.body).not.toHaveProperty('homeCoordinates')
   })
 })
 

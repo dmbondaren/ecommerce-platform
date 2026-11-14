@@ -14,6 +14,11 @@ export const accountPatchSchema = z.object({
   phone: phoneSchema.nullable().optional(),
   preferredCurrency: z.enum(SUPPORTED_CURRENCIES).optional(),
   avatarUrl: uploadUrlSchema.nullable().optional(),
+  homeAddress: z.string().trim().max(160).nullable().optional(),
+  homeCoordinates: z
+    .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) })
+    .nullable()
+    .optional(),
 })
 
 export type AccountPatch = z.infer<typeof accountPatchSchema>
@@ -34,7 +39,20 @@ export const userService = {
       })
       if (taken) throw conflict('This nickname is already taken')
     }
-    return toAccount(await prisma.user.update({ where: { id: userId }, data: patch }))
+    const { homeCoordinates, homeAddress, ...fields } = patch
+    return toAccount(
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          ...fields,
+          homeAddress: homeAddress === undefined ? undefined : homeAddress || null,
+          // `undefined` leaves the position alone, `null` removes it.
+          ...(homeCoordinates === undefined
+            ? {}
+            : { homeLatitude: homeCoordinates?.lat ?? null, homeLongitude: homeCoordinates?.lng ?? null }),
+        },
+      }),
+    )
   },
 
   async publicProfile(id: string) {

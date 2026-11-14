@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { randomToken, sha256 } from '../../src/lib/crypto'
-import { escapeHtml, renderMail } from '../../src/mail/mailer'
+import { escapeHtml, parseSender, renderMail } from '../../src/mail/mailer'
 import { isAdminRole, isBanned } from '../../src/middleware/auth'
 import { signAccessToken, verifyAccessToken } from '../../src/modules/auth/tokens'
 
@@ -63,5 +63,16 @@ describe('token helpers', () => {
     expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/)
     expect(randomToken()).not.toBe(token)
     expect(sha256('abc')).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad')
+  })
+})
+
+describe('parseSender', () => {
+  it('splits a display name from the address', () => {
+    expect(parseSender('Marketplace <no-reply@example.com>')).toEqual({ name: 'Marketplace', email: 'no-reply@example.com' })
+    expect(parseSender('"My Shop" <shop@example.com>')).toEqual({ name: 'My Shop', email: 'shop@example.com' })
+  })
+
+  it('accepts a bare address', () => {
+    expect(parseSender(' shop@example.com ')).toEqual({ name: 'Marketplace', email: 'shop@example.com' })
   })
 })

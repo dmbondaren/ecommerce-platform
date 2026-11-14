@@ -102,9 +102,13 @@ function Reports() {
                 </header>
                 <p className="prose">{report.message}</p>
                 <footer className="row">
-                  <span className="inline">
-                    <span className="muted">Reported by</span> <UserLink user={report.reporter} />
-                  </span>
+                  {report.reporter ? (
+                    <span className="inline">
+                      <span className="muted">Reported by</span> <UserLink user={report.reporter} />
+                    </span>
+                  ) : (
+                    <span className="badge">Automatic check</span>
+                  )}
                   {report.status === 'OPEN' ? (
                     <Button size="sm" busy={resolve.isPending && resolve.variables === report.id} onClick={() => resolve.mutate(report.id)}>
                       Mark as resolved

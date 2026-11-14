@@ -33,6 +33,8 @@ const schema = z.object({
   PAYMENT_RECIPIENT: z.string().default('Marketplace Escrow (demo)'),
   PAYMENT_IBAN: z.string().default('CH93 0076 2011 6238 5295 7'),
   PAYMENT_WINDOW_MINUTES: z.coerce.number().int().min(1).max(24 * 60).default(15),
+  /** Sends e-mail through Brevo's HTTPS API; for hosts that block SMTP ports. Takes precedence over SMTP. */
+  BREVO_API_KEY: optional(z.string()),
   SMTP_HOST: optional(z.string()),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_USER: optional(z.string()),

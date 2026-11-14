@@ -40,3 +40,8 @@ services:
         value: "true"
       - key: SEED_DEMO_DATA
         value: "true"
+      # Optional: e-mail through Brevo's HTTPS API (the free plan blocks SMTP ports).
+      - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false

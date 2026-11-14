@@ -25,6 +25,9 @@ export interface Account extends PublicUser {
   role: Role
   phone: string | null
   preferredCurrency: Currency
+  /** Private; only used to find listings nearby. */
+  homeAddress: string | null
+  homeCoordinates: Coordinates | null
 }
 
 export interface AdminUser extends Account {

@@ -1,7 +1,7 @@
 /**
- * Automatic screening of new and edited listings. It does not reject
- * anything by itself: a flagged listing is held back until a moderator has
- * looked at it, and its owner is told why.
+ * Automatic screening of new and edited listings. It never blocks or delays
+ * publishing: a flagged listing goes live like any other, and a report is
+ * filed so that a moderator takes a look.
  */
 
 const PROHIBITED_TERMS = [
@@ -25,7 +25,7 @@ const MAX_LINKS = 1
 const SHOUTING_MIN_LETTERS = 12
 const SHOUTING_RATIO = 0.7
 
-/** Returns why a listing needs a human look, or `null` when it can be published. */
+/** Returns why a listing deserves a human look, or `null` when nothing stands out. */
 export function screenListing(title: string, description: string): string | null {
   const text = `${title}\n${description}`
   const lower = text.toLowerCase()
