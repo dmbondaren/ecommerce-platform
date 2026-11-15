@@ -19,19 +19,26 @@ export async function ensureCategories() {
 }
 
 /**
- * Creates the first super administrator from the environment, or promotes
- * the existing account with that e-mail. The password of an existing account
- * is never overwritten.
+ * Makes the account named by SUPER_ADMIN_EMAIL a super administrator. An
+ * existing account is promoted (its password is never touched); otherwise the
+ * account is created, which also needs SUPER_ADMIN_PASSWORD.
  */
 export async function ensureSuperAdmin() {
-  if (!env.SUPER_ADMIN_EMAIL || !env.SUPER_ADMIN_PASSWORD) return
-  const email = env.SUPER_ADMIN_EMAIL.toLowerCase()
+  if (!env.SUPER_ADMIN_EMAIL) return
+  const email = env.SUPER_ADMIN_EMAIL.trim().toLowerCase()
   const existing = await prisma.user.findUnique({ where: { email }, select: { id: true, role: true } })
   if (existing) {
     if (existing.role !== 'SUPER_ADMIN') {
-      await prisma.user.update({ where: { id: existing.id }, data: { role: 'SUPER_ADMIN' } })
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: { role: 'SUPER_ADMIN', emailVerifiedAt: new Date() },
+      })
       logger.info({ email }, 'Promoted existing account to super admin')
     }
+    return
+  }
+  if (!env.SUPER_ADMIN_PASSWORD) {
+    logger.warn({ email }, 'SUPER_ADMIN_EMAIL has no account yet: register it, or set SUPER_ADMIN_PASSWORD')
     return
   }
   await prisma.user.create({

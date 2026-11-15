@@ -159,5 +159,13 @@ export const adminApi = {
   removeListing: (id: string, reason: string) => post<void>(`/admin/listings/${id}/remove`, { reason }),
   reports: (status: 'OPEN' | 'RESOLVED') => api<Report[]>('/admin/reports', { query: { status } }),
   resolveReport: (id: string) => post<Report>(`/admin/reports/${id}/resolve`),
+  system: () =>
+    api<{
+      mail: { transport: 'brevo' | 'smtp' | 'log'; sender: string }
+      autoVerifyEmail: boolean
+      storage: string
+      paymentWindowMinutes: number
+    }>('/admin/system'),
+  sendTestEmail: () => post<{ sentTo: string }>('/admin/system/test-email'),
   auditLog: (page: number) => api<Page<AuditEntry>>('/admin/audit-log', { query: { page } }),
 }

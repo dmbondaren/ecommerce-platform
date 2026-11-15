@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { Link, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
+import { errorMessage } from '../../api/client'
 import { adminApi, chatApi } from '../../api/endpoints'
 import type { AdminUser, Listing } from '../../api/types'
 import { useAuth } from '../../app/auth'
@@ -363,6 +364,60 @@ function AuditLog() {
   )
 }
 
+const TRANSPORT_LABELS = {
+  brevo: 'Brevo (HTTPS API)',
+  smtp: 'SMTP server',
+  log: 'Not configured: messages are only written to the server log',
+}
+
+function System() {
+  const query = useQuery({ queryKey: [...adminKey, 'system'], queryFn: adminApi.system })
+  const test = useMutation({ mutationFn: adminApi.sendTestEmail, meta: { silent: true } })
+
+  return (
+    <QueryView query={query}>
+      {(system) => (
+        <div className="card form">
+          <h2>E-mail</h2>
+          <dl className="definition">
+            <div>
+              <dt>Delivery</dt>
+              <dd>{TRANSPORT_LABELS[system.mail.transport]}</dd>
+            </div>
+            <div>
+              <dt>Sender address</dt>
+              <dd>{system.mail.sender}</dd>
+            </div>
+            <div>
+              <dt>Sign-up confirmation</dt>
+              <dd>
+                {system.autoVerifyEmail
+                  ? 'Off: new accounts are confirmed automatically, so no confirmation e-mail is sent'
+                  : 'On: new accounts get a confirmation e-mail'}
+              </dd>
+            </div>
+          </dl>
+          <div className="row">
+            <Button variant="primary" busy={test.isPending} onClick={() => test.mutate()}>
+              Send a test e-mail to myself
+            </Button>
+          </div>
+          {test.isSuccess && (
+            <p className="notice" role="status">
+              The provider accepted a message for {test.data.sentTo}. Check the inbox and the spam folder.
+            </p>
+          )}
+          {test.isError && (
+            <p className="form-error" role="alert">
+              {errorMessage(test.error)}
+            </p>
+          )}
+        </div>
+      )}
+    </QueryView>
+  )
+}
+
 export default function Admin() {
   useDocumentTitle('Administration')
   return (
@@ -375,6 +430,7 @@ export default function Admin() {
         <NavLink to="/admin/reports">Reports</NavLink>
         <NavLink to="/admin/users">Users</NavLink>
         <NavLink to="/admin/audit">Audit log</NavLink>
+        <NavLink to="/admin/system">System</NavLink>
       </nav>
       <div className="stack">
         <Routes>
@@ -382,6 +438,7 @@ export default function Admin() {
           <Route path="reports" element={<Reports />} />
           <Route path="users" element={<Users />} />
           <Route path="audit" element={<AuditLog />} />
+          <Route path="system" element={<System />} />
         </Routes>
       </div>
     </>

@@ -28,24 +28,24 @@ const RADII = [1, 2, 5, 10, 20]
 function NearbyFilter({ radius, onChange }: { radius: string; onChange: (radius: string) => void }) {
   const { user } = useAuth()
   const requireLogin = useRequireLogin()
-  const [open, setOpen] = useState(false)
   const [asking, setAsking] = useState(false)
   const active = radius !== ''
-
-  const toggle = () =>
-    requireLogin(() => {
-      if (!user?.homeCoordinates) setAsking(true)
-      else setOpen((current) => !current)
-    })
+  const hasHome = Boolean(user?.homeCoordinates)
 
   return (
     <div className="nearby">
-      <button type="button" className={active ? 'nearby-btn active' : 'nearby-btn'} aria-expanded={open} onClick={toggle}>
+      <button
+        type="button"
+        className={active ? 'nearby-btn active' : 'nearby-btn'}
+        title={hasHome ? `Searching around ${user?.homeAddress || 'your address'}. Click to change it.` : undefined}
+        // With an address on file the button opens it for editing; without one it offers to add it.
+        onClick={() => requireLogin(() => setAsking(true))}
+      >
         <Icon name="pin" size={18} />
         {active ? `Within ${radius} km` : 'Near me'}
       </button>
-      {(open || active) && user?.homeCoordinates && (
-        <div className="chips nearby-options" role="group" aria-label="Distance from home">
+      {hasHome && (
+        <div className="chips nearby-options" role="group" aria-label="Distance from your address">
           {RADII.map((km) => (
             <button
               key={km}
@@ -57,16 +57,11 @@ function NearbyFilter({ radius, onChange }: { radius: string; onChange: (radius:
               {km} km
             </button>
           ))}
-          <button
-            type="button"
-            className="chip"
-            onClick={() => {
-              onChange('')
-              setOpen(false)
-            }}
-          >
-            Everywhere
-          </button>
+          {active && (
+            <button type="button" className="chip" onClick={() => onChange('')}>
+              Everywhere
+            </button>
+          )}
         </div>
       )}
       {asking && (
@@ -74,7 +69,8 @@ function NearbyFilter({ radius, onChange }: { radius: string; onChange: (radius:
           onClose={() => setAsking(false)}
           onSaved={() => {
             setAsking(false)
-            onChange('5')
+            // Keeps the chosen distance when only the address changed.
+            if (!active) onChange('5')
           }}
         />
       )}

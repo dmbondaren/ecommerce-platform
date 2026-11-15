@@ -93,6 +93,10 @@ async function sendViaBrevo(apiKey: string, mail: Mail): Promise<void> {
   }
 }
 
+/** Which way e-mail leaves this deployment; `log` means it is only written to the server log. */
+export const mailTransport = (): 'brevo' | 'smtp' | 'log' =>
+  env.BREVO_API_KEY ? 'brevo' : env.SMTP_HOST ? 'smtp' : 'log'
+
 export const mailer = {
   /** Without SMTP settings the message is logged, which keeps local development self-contained. */
   async send(mail: Mail): Promise<void> {

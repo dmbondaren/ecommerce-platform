@@ -1,7 +1,7 @@
 /* ---------- Design tokens ---------- */
 :root {
   color-scheme: light dark;
-  --bg: #f5f6fa;
+  --bg: #eef0f7;
   --surface: #ffffff;
   --surface-2: #eceef5;
   --text: #151826;
@@ -31,7 +31,7 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #0d0f17;
+  --bg: #0a0c12;
   --surface: #161926;
   --surface-2: #1f2333;
   --text: #eceef6;
@@ -51,7 +51,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --bg: #0d0f17;
+    --bg: #0a0c12;
     --surface: #161926;
     --surface-2: #1f2333;
     --text: #eceef6;
@@ -248,8 +248,14 @@ input[readonly] {
 
 .main {
   flex: 1;
+  margin-top: 20px;
+  margin-bottom: 28px;
   padding-top: 28px;
-  padding-bottom: 56px;
+  padding-bottom: 40px;
+  /* A quiet panel behind the content, so the page has a visible column. */
+  background: color-mix(in srgb, var(--surface) 55%, var(--bg));
+  border: 1px solid var(--border);
+  border-radius: 24px;
 }
 
 .narrow {
@@ -1898,6 +1904,13 @@ tbody tr {
     display: none;
   }
 
+  .main {
+    margin-top: 0;
+    margin-bottom: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
   /* Touch screens have no hover, so the lift would stick after a tap. */
   .btn:hover:not(:disabled),
   .listing-card:hover {
@@ -2023,4 +2036,15 @@ tbody tr {
 
 .toolbar > select {
   margin-right: auto;
+}
+
+.definition {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.definition dt {
+  color: var(--muted);
+  font-size: 0.8rem;
 }

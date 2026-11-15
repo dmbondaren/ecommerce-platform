@@ -103,8 +103,15 @@ export function useSaveHome() {
  * offer, not a gate: closing it asks once whether to skip, and skipping is fine.
  */
 export function HomeAddressPrompt({ onSaved, onClose }: { onSaved: () => void; onClose: () => void }) {
+  const { user } = useAuth()
   const save = useSaveHome()
-  const [value, setValue] = useState<HomeValue>({ address: '', coordinates: null })
+  // With an address on file this is an edit: it starts from the saved one and can simply be cancelled.
+  const editing = Boolean(user?.homeCoordinates)
+  const [value, setValue] = useState<HomeValue>({
+    address: user?.homeAddress ?? '',
+    coordinates: user?.homeCoordinates ?? null,
+  })
+  const dismiss = editing ? onClose : () => setConfirmingSkip(true)
   const [confirmingSkip, setConfirmingSkip] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<unknown>(null)
@@ -119,7 +126,7 @@ export function HomeAddressPrompt({ onSaved, onClose }: { onSaved: () => void; o
     setError(null)
     try {
       await save(value)
-      toast.success('Home address saved')
+      toast.success(editing ? 'Address changed' : 'Home address saved')
       onSaved()
     } catch (err) {
       setError(err)
@@ -144,15 +151,19 @@ export function HomeAddressPrompt({ onSaved, onClose }: { onSaved: () => void; o
   }
 
   return (
-    <Modal title="Where is home?" onClose={() => setConfirmingSkip(true)}>
+    <Modal title={editing ? 'Search around another address' : 'Where is home?'} onClose={dismiss}>
       <form onSubmit={(event) => void submit(event)}>
         <div className="modal-body">
-          <p className="muted">Add your address once to see listings within walking or cycling distance.</p>
+          <p className="muted">
+            {editing
+              ? 'Change the address to search around a different place. Cancel keeps the current one.'
+              : 'Add your address once to see listings within walking or cycling distance.'}
+          </p>
           <HomeAddressFields value={value} onChange={setValue} />
           <FormError error={error} />
         </div>
         <footer className="modal-footer">
-          <Button onClick={() => setConfirmingSkip(true)}>Not now</Button>
+          <Button onClick={dismiss}>{editing ? 'Cancel' : 'Not now'}</Button>
           <Button type="submit" variant="primary" busy={busy}>
             Save address
           </Button>

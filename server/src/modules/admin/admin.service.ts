@@ -1,8 +1,10 @@
 import type { Prisma, User } from '@prisma/client'
 import { z } from 'zod'
-import { conflict, forbidden, notFound } from '../../lib/errors'
+import { env } from '../../config/env'
+import { AppError, conflict, forbidden, notFound } from '../../lib/errors'
 import { paginated } from '../../lib/http'
 import { prisma } from '../../lib/prisma'
+import { mailer, mailTransport, parseSender } from '../../mail/mailer'
 import { isAdminRole, type AuthContext } from '../../middleware/auth'
 import { hub } from '../../realtime/hub'
 import { listingInclude, toListing } from '../listings/listing.dto'
@@ -213,6 +215,39 @@ export const adminService = {
       listing.ownerId,
       `Your listing "${listing.title}" was removed by a moderator: ${why}`,
     )
+  },
+
+  /** How this deployment is set up, without revealing any secret. */
+  system() {
+    return {
+      mail: { transport: mailTransport(), sender: parseSender(env.MAIL_FROM).email },
+      autoVerifyEmail: env.AUTO_VERIFY_EMAIL,
+      storage: env.STORAGE_DRIVER,
+      paymentWindowMinutes: env.PAYMENT_WINDOW_MINUTES,
+    }
+  },
+
+  /**
+   * Sends a message to the administrator's own address and, unlike the
+   * e-mails the application sends in the background, reports the provider's
+   * answer, so a wrong key or an unverified sender can be seen at once.
+   */
+  async sendTestEmail(actor: AuthContext) {
+    if (mailTransport() === 'log') {
+      throw new AppError(409, 'MAIL_NOT_CONFIGURED', 'No e-mail provider is configured: set BREVO_API_KEY (or SMTP_HOST)')
+    }
+    const user = await findUser(actor.userId)
+    try {
+      await mailer.send({
+        to: user.email,
+        subject: 'Marketplace test e-mail',
+        heading: 'It works',
+        body: 'This message confirms that the marketplace can send e-mail.',
+      })
+    } catch (err) {
+      throw new AppError(502, 'MAIL_FAILED', err instanceof Error ? err.message : 'The e-mail provider refused the message')
+    }
+    return { sentTo: user.email }
   },
 
   async auditLog(page: number, pageSize: number) {

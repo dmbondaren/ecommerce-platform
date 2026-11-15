@@ -25,6 +25,10 @@ export function createApp() {
     helmet({
       // Images are loaded by the web client from another origin during development.
       crossOriginResourcePolicy: { policy: 'cross-origin' },
+      // Helmet's default ("no-referrer") hides where a request comes from, and
+      // OpenStreetMap's tile servers refuse requests that do not say. This
+      // sends the site's origin only, never the page address.
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
       // Applies to the web client when this process serves it: map tiles and
       // the address search are the only third parties the page may talk to.
       contentSecurityPolicy: {

@@ -66,6 +66,14 @@ adminRouter.post('/reports/:id/resolve', async (req, res) => {
   res.json(await reportService.resolve(getAuth(req).userId, param(req, 'id')))
 })
 
+adminRouter.get('/system', (_req, res) => {
+  res.json(adminService.system())
+})
+
+adminRouter.post('/system/test-email', async (req, res) => {
+  res.json(await adminService.sendTestEmail(getAuth(req)))
+})
+
 adminRouter.get('/audit-log', async (req, res) => {
   const { page, pageSize } = parse(pageSchema, req.query)
   res.json(await adminService.auditLog(page, pageSize))
