@@ -30,8 +30,8 @@ createRoot(root).render(
         <AuthProvider>
           <BrowserRouter>
             <LocalizedApp />
+            <Toasts />
           </BrowserRouter>
-          <Toasts />
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>

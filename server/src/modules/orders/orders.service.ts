@@ -62,6 +62,9 @@ const newPaymentReference = () =>
     .slice(0, 8)
     .toUpperCase()}`
 
+/** Uploads are stored as site-relative paths; an e-mail needs the full address. */
+const absoluteUrl = (path: string) => (path.startsWith('http') ? path : `${env.CLIENT_URL}${path}`)
+
 const amountOf = (order: OrderRow) => `${order.price.toFixed(2)} ${order.currency}`
 
 async function emailOf(userId: string | null) {
@@ -207,12 +210,24 @@ export const orderService = {
     }
     inBackground('send order e-mails', async () => {
       const [buyerEmail, sellerEmail] = await Promise.all([emailOf(order.buyerId), emailOf(order.sellerId)])
+      const cover = order.imageUrlsSnapshot[0]
+      // A receipt: everything the buyer needs to know about what they bought.
+      const receipt: [string, string][] = [
+        ['Item', order.titleSnapshot],
+        ['Price', amountOf(order)],
+        ['Category', order.categorySnapshot],
+        ['Seller', order.seller?.nickname ?? 'Deleted account'],
+        ['Paid on', (order.paidAt ?? new Date()).toISOString().slice(0, 16).replace('T', ' ') + ' UTC'],
+        ['Reference', order.paymentReference ?? order.id],
+      ]
       if (buyerEmail) {
         await mailer.send({
           to: buyerEmail,
-          subject: `Payment confirmed: ${order.titleSnapshot}`,
+          subject: `Your purchase: ${order.titleSnapshot}`,
           heading: 'Thank you for your purchase',
-          body: `You confirmed the payment of ${amountOf(order)} for "${order.titleSnapshot}". Contact the seller in the chat to arrange the handover.`,
+          body: `You confirmed the payment for "${order.titleSnapshot}". Contact the seller in the chat to arrange the handover, and leave a review once you have the item.`,
+          imageUrl: cover ? absoluteUrl(cover) : undefined,
+          details: receipt,
           action: { label: 'View my purchases', url: `${env.CLIENT_URL}/account/purchases` },
         })
       }

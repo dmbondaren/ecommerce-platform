@@ -39,6 +39,7 @@ const conversationInclude = {
   buyer: { select: publicUserSelect },
   seller: { select: publicUserSelect },
   messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+  reads: { select: { userId: true, lastReadAt: true } },
 } satisfies Prisma.ConversationInclude
 
 type ConversationRow = Prisma.ConversationGetPayload<{ include: typeof conversationInclude }>
@@ -62,8 +63,13 @@ const toMessage = (message: MessageRow) => {
   }
 }
 
-const toConversation = (row: ConversationRow, unreadCount: number) => {
+const toConversation = (row: ConversationRow, unreadCount: number, viewerId: string) => {
   const last = row.messages[0]
+  // The latest moment someone other than the viewer had the conversation open:
+  // every message of the viewer up to then has been seen.
+  const seenByOthersAt = row.reads
+    .filter((read) => read.userId !== viewerId)
+    .reduce<Date | null>((latest, read) => (!latest || read.lastReadAt > latest ? read.lastReadAt : latest), null)
   return {
     id: row.id,
     type: row.type,
@@ -86,6 +92,7 @@ const toConversation = (row: ConversationRow, unreadCount: number) => {
         }
       : null,
     lastMessageAt: row.lastMessageAt,
+    seenByOthersAt,
     unreadCount,
   }
 }
@@ -176,7 +183,7 @@ export const conversationService = {
     const row = await prisma.conversation.findUnique({ where: { id }, include: conversationInclude })
     if (!row || !canAccess(row, auth)) throw notFound('Conversation')
     const unread = await unreadCounts(auth.userId, [id])
-    return toConversation(row, unread.get(id) ?? 0)
+    return toConversation(row, unread.get(id) ?? 0, auth.userId)
   },
 
   async list(auth: AuthContext) {
@@ -196,7 +203,7 @@ export const conversationService = {
       auth.userId,
       rows.map((row) => row.id),
     )
-    return rows.map((row) => toConversation(row, unread.get(row.id) ?? 0))
+    return rows.map((row) => toConversation(row, unread.get(row.id) ?? 0, auth.userId))
   },
 
   async unreadTotal(auth: AuthContext) {

@@ -66,7 +66,16 @@ function ConversationList({ conversations, activeId, viewerId }: { conversations
   )
 }
 
-function Bubble({ message, mine, onEdit, onDelete }: { message: Message; mine: boolean; onEdit: () => void; onDelete: () => void }) {
+interface BubbleProps {
+  message: Message
+  mine: boolean
+  /** For the viewer's own messages: the other side has opened the chat since it was sent. */
+  seen: boolean
+  onEdit: () => void
+  onDelete: () => void
+}
+
+function Bubble({ message, mine, seen, onEdit, onDelete }: BubbleProps) {
   return (
     <div className={mine ? 'bubble-row mine' : 'bubble-row'}>
       <div className={message.deleted ? 'bubble deleted' : 'bubble'}>
@@ -86,6 +95,12 @@ function Bubble({ message, mine, onEdit, onDelete }: { message: Message; mine: b
         <span className="bubble-meta">
           {formatTime(message.createdAt)}
           {message.editedAt && !message.deleted && ' · edited'}
+          {mine && !message.deleted && (
+            <span className={seen ? 'receipt seen' : 'receipt'} title={seen ? t('Seen') : t('Sent')}>
+              {' · '}
+              {seen ? `✓✓ ${t('Seen')}` : `✓ ${t('Sent')}`}
+            </span>
+          )}
         </span>
       </div>
       {mine && !message.deleted && (
@@ -119,6 +134,9 @@ function Thread({ id, viewerId }: { id: string; viewerId: string }) {
     () => (history.data?.pages ?? []).slice().reverse().flatMap((page) => page.items),
     [history.data],
   )
+
+  const seenIso = conversation.data?.seenByOthersAt
+  const seenAt = seenIso ? new Date(seenIso).getTime() : null
 
   const [text, setText] = useState('')
   const [editing, setEditing] = useState<Message | null>(null)
@@ -246,6 +264,7 @@ function Thread({ id, viewerId }: { id: string; viewerId: string }) {
                   <Bubble
                     message={message}
                     mine={message.sender?.id === viewerId}
+                    seen={seenAt !== null && new Date(message.createdAt).getTime() <= seenAt}
                     onEdit={() => {
                       setEditing(message)
                       setText(message.body)

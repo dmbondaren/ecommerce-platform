@@ -23,14 +23,16 @@ interface HeaderLinkProps {
   count?: number
   /** Fills the icon in red, e.g. the heart once something is saved. */
   highlight?: boolean
+  /** Makes the counter pulse: for things waiting for an answer, such as unread messages. */
+  pulse?: boolean
 }
 
-function HeaderLink({ to, icon, label, count = 0, highlight = false }: HeaderLinkProps) {
+function HeaderLink({ to, icon, label, count = 0, highlight = false, pulse = false }: HeaderLinkProps) {
   return (
     <NavLink to={to} className={highlight ? 'header-link highlighted' : 'header-link'} aria-label={count ? `${label} (${count} new)` : label} title={label}>
       {/* The key restarts the little bounce every time the count changes. */}
       <Icon key={count} name={icon} size={22} filled={highlight} className={highlight ? 'pop' : undefined} />
-      {count > 0 && <span className="counter">{count > 99 ? '99+' : count}</span>}
+      {count > 0 && <span className={pulse ? 'counter pulse' : 'counter'}>{count > 99 ? '99+' : count}</span>}
     </NavLink>
   )
 }
@@ -130,12 +132,13 @@ export function Layout() {
                   highlight={favoriteIds.size > 0}
                 />
                 <HeaderLink to="/cart" icon="cart" label={t('Cart')} count={cartCount} />
-                <HeaderLink to="/messages" icon="chat" label={t('Messages')} count={unread.data?.count} />
+                <HeaderLink to="/messages" icon="chat" label={t('Messages')} count={unread.data?.count} pulse />
                 <HeaderLink
                   to="/account/notifications"
                   icon="bell"
                   label={t('Notifications')}
                   count={notifications.data?.unreadCount}
+                  pulse
                 />
                 <NavLink to="/account" className="header-link" aria-label={t('My account')} title={t('My account')}>
                   <Avatar user={user} size={30} />

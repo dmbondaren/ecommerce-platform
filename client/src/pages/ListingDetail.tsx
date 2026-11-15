@@ -139,6 +139,11 @@ function Actions({ listing }: { listing: Listing }) {
                 {t('Approve')}
               </Button>
             )}
+            {listing.status !== 'RESERVED' && listing.status !== 'SOLD' && listing.status !== 'ARCHIVED' && (
+              <Link className="btn btn-secondary btn-sm" to={`/listings/${listing.id}/edit`}>
+                {t('Edit')}
+              </Link>
+            )}
             <Button size="sm" variant="danger" onClick={() => setDialog('remove')}>
               {t('Remove')}
             </Button>

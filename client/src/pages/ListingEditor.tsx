@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { listingApi } from '../api/endpoints'
+import { adminApi, listingApi } from '../api/endpoints'
 import type { Coordinates, Currency, Listing, ListingInput } from '../api/types'
 import { useAuth } from '../app/auth'
 import { useDocumentTitle } from '../app/hooks'
@@ -32,8 +32,10 @@ interface FormState {
  * creates a new listing, which is how a sold item is offered again.
  */
 function EditorForm({ listing, template }: { listing?: Listing; template?: Listing }) {
+  const { user, setUser, isStaff } = useAuth()
   const source = listing ?? template
-  const { user, setUser } = useAuth()
+  // A moderator correcting someone else's listing: saved through the admin API, the owner is notified.
+  const moderating = listing !== undefined && isStaff && listing.owner.id !== user?.id
   const navigate = useNavigate()
   const client = useQueryClient()
   const categories = useQuery({ queryKey: keys.categories, queryFn: listingApi.categories, staleTime: Infinity })
@@ -48,7 +50,7 @@ function EditorForm({ listing, template }: { listing?: Listing; template?: Listi
     imageUrls: source?.imageUrls ?? [],
     coordinates: source?.coordinates ?? null,
     // Remembered from the user's last listing, so it only has to be typed once.
-    paymentAccount: user?.paymentAccount ?? '',
+    paymentAccount: moderating ? '' : (user?.paymentAccount ?? ''),
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<unknown>(null)
@@ -61,10 +63,14 @@ function EditorForm({ listing, template }: { listing?: Listing; template?: Listi
     setError(null)
     const input: ListingInput = { ...form, price: Number(form.price), categoryId: Number(form.categoryId) }
     try {
-      const saved = listing ? await listingApi.update(listing.id, input) : await listingApi.create(input)
+      const saved = moderating
+        ? await adminApi.updateListing(listing.id, input)
+        : listing
+          ? await listingApi.update(listing.id, input)
+          : await listingApi.create(input)
       await client.invalidateQueries({ queryKey: keys.listings })
       // The payment account just saved is the default for the next listing.
-      if (user && form.paymentAccount.trim()) setUser({ ...user, paymentAccount: form.paymentAccount.trim() })
+      if (user && !moderating && form.paymentAccount.trim()) setUser({ ...user, paymentAccount: form.paymentAccount.trim() })
       toast.success(listing ? 'Changes saved' : 'Your listing is live')
       navigate(`/listings/${saved.id}`)
     } catch (err) {
@@ -169,7 +175,12 @@ function EditorForm({ listing, template }: { listing?: Listing; template?: Listi
         </Field>
       </div>
 
-      <Field
+      {moderating && (
+        <p className="notice notice-warn" role="status">
+          {t('You are editing another user’s listing as a moderator. The owner will be notified.')}
+        </p>
+      )}
+      {!moderating && <Field
         label={t('Account for payments (optional)')}
         errors={errors.paymentAccount}
         hint={t('For example your IBAN. A buyer sees it only after reserving the item. It is remembered for your next listings.')}
@@ -184,7 +195,7 @@ function EditorForm({ listing, template }: { listing?: Listing; template?: Listi
             onChange={(event) => set('paymentAccount', event.target.value)}
           />
         )}
-      </Field>
+      </Field>}
 
       <LocationPicker
         address={form.location}
@@ -207,7 +218,7 @@ function EditorForm({ listing, template }: { listing?: Listing; template?: Listi
 export function ListingEditor() {
   const { id } = useParams()
   const [params] = useSearchParams()
-  const { user } = useAuth()
+  const { user, isStaff } = useAuth()
   // "/sell?from=<id>" starts a new listing from one of the user's own, e.g. a sold one.
   const templateId = id ? null : params.get('from')
   const sourceId = id ?? templateId ?? ''
@@ -247,7 +258,7 @@ export function ListingEditor() {
       <PageHeader title={t('Edit listing')} />
       <QueryView query={existing}>
         {(listing) =>
-          listing.owner.id === user?.id ? (
+          listing.owner.id === user?.id || isStaff ? (
             <EditorForm key={listing.id} listing={listing} />
           ) : (
             <EmptyState title={t('You can only edit your own listings')} />

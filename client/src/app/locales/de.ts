@@ -710,4 +710,12 @@ export const de: Record<string, string> = {
     'Gekauft',
   'Show all':
     'Alle anzeigen',
+  'Seen':
+    'Gelesen',
+  'Sent':
+    'Gesendet',
+  'New message from {name}':
+    'Neue Nachricht von {name}',
+  'You are editing another user’s listing as a moderator. The owner will be notified.':
+    'Sie bearbeiten als Moderator das Inserat eines anderen Nutzers. Der Besitzer wird benachrichtigt.',
 }

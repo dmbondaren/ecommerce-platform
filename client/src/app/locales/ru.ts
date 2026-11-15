@@ -710,4 +710,12 @@ export const ru: Record<string, string> = {
     'Куплено',
   'Show all':
     'Показать все',
+  'Seen':
+    'Просмотрено',
+  'Sent':
+    'Отправлено',
+  'New message from {name}':
+    'Новое сообщение от {name}',
+  'You are editing another user’s listing as a moderator. The owner will be notified.':
+    'Вы редактируете объявление другого пользователя как модератор. Владелец получит уведомление.',
 }

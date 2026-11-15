@@ -175,6 +175,8 @@ export interface Conversation {
   seller: PublicUser | null
   lastMessage: { body: string; hasAttachment: boolean; senderId: string | null; createdAt: string } | null
   lastMessageAt: string
+  /** When someone else last had the conversation open; the viewer's messages up to then are seen. */
+  seenByOthersAt: string | null
   unreadCount: number
 }
 

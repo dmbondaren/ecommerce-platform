@@ -710,4 +710,12 @@ export const uk: Record<string, string> = {
     'Куплено',
   'Show all':
     'Показати всі',
+  'Seen':
+    'Переглянуто',
+  'Sent':
+    'Надіслано',
+  'New message from {name}':
+    'Нове повідомлення від {name}',
+  'You are editing another user’s listing as a moderator. The owner will be notified.':
+    'Ви редагуєте оголошення іншого користувача як модератор. Власника буде сповіщено.',
 }

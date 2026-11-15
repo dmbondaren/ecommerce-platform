@@ -8,9 +8,19 @@ import { t } from './i18n'
 
 const MAX_DELAY_MS = 30_000
 
-function handle(event: ServerEvent, logout: () => Promise<void>) {
+function handle(event: ServerEvent, logout: () => Promise<void>, userId: string | undefined) {
   switch (event.type) {
-    case 'message.created':
+    case 'message.created': {
+      const { message, conversationId } = event
+      const path = `/messages/${conversationId}`
+      // Someone else wrote, and the user is not looking at that conversation right now.
+      if (message.sender && message.sender.id !== userId && window.location.pathname !== path) {
+        const preview = message.body ? message.body.slice(0, 80) : t('Photo')
+        toast.alert(`${t('New message from {name}', { name: message.sender.nickname })}: ${preview}`, path)
+      }
+      void queryClient.invalidateQueries({ queryKey: keys.conversations })
+      break
+    }
     case 'message.updated':
     case 'conversation.read':
       // `conversations` is a prefix of the message and unread keys too.
@@ -23,7 +33,7 @@ function handle(event: ServerEvent, logout: () => Promise<void>) {
       break
     case 'notification.created':
       void queryClient.invalidateQueries({ queryKey: keys.notifications })
-      toast.info(event.notification.message)
+      toast.alert(event.notification.message, event.notification.link ?? '/account/notifications')
       break
     case 'account.suspended':
       toast.error(t('Your account has been suspended.'))
@@ -62,7 +72,7 @@ export function useRealtime() {
       }
       socket.onmessage = (message) => {
         try {
-          handle(JSON.parse(String(message.data)) as ServerEvent, logout)
+          handle(JSON.parse(String(message.data)) as ServerEvent, logout, userId)
         } catch {
           // A malformed frame is not worth breaking the page for.
         }

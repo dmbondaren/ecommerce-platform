@@ -27,12 +27,14 @@ It started as my bachelor's thesis (Express + Sequelize + MySQL, one 1 000-line 
 **Communication**
 - Real-time chat between buyer and seller (WebSocket), with photos, editing and deleting
 - Support chat with the moderation team
-- In-app notifications and transactional e-mail
+- In-app notifications and transactional e-mail, including a receipt with the item's photo after payment
+- Read receipts in chats, and alerts for new messages that are hard to miss
 
 **Moderation**
 - Roles: user, admin, super admin
 - Automatic screening of new and edited listings (prohibited items, off-platform payment requests, link spam); a flagged listing is published like any other and reported to the moderators
 - Reports, a moderation queue, temporary and permanent suspensions
+- Moderators can correct a user's listing; the owner is notified and the change is logged
 - An audit log of every moderation action
 - Platform statistics for staff: totals, 30-day trends, sales by category, top sellers and buyers, and an archive of every order with the listing exactly as it was sold
 

@@ -8,6 +8,7 @@ import { lastMailFailure, mailer, mailTransport, parseSender } from '../../mail/
 import { isAdminRole, type AuthContext } from '../../middleware/auth'
 import { hub } from '../../realtime/hub'
 import { listingInclude, toListing } from '../listings/listing.dto'
+import type { ListingInput } from '../listings/listing.schemas'
 import { listingService } from '../listings/listings.service'
 import { notificationService } from '../notifications/notifications.service'
 import { publicUserSelect, toAdminUser, toPublicUser } from '../users/user.dto'
@@ -208,6 +209,20 @@ export const adminService = {
       `/listings/${id}`,
     )
     return toListing(updated)
+  },
+
+  /** A moderator corrects a user's listing; the owner is told and the change is logged. */
+  async editListing(actor: AuthContext, id: string, input: ListingInput) {
+    const updated = await listingService.update(actor.userId, id, input, { asStaff: true })
+    await recordAudit({ actorId: actor.userId, action: 'LISTING_EDITED', targetType: 'listing', targetId: id, reason: updated.title })
+    if (updated.owner.id !== actor.userId) {
+      notificationService.notifyInBackground(
+        updated.owner.id,
+        `A moderator edited your listing "${updated.title}". Please check that everything is still correct.`,
+        `/listings/${id}`,
+      )
+    }
+    return updated
   },
 
   async removeListing(actor: AuthContext, id: string, why: string) {

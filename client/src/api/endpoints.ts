@@ -157,6 +157,8 @@ export const adminApi = {
     api<AdminUser>(`/admin/users/${id}/role`, { method: 'PUT', body: { role } }),
   deleteUser: (id: string, reason: string) => post<void>(`/admin/users/${id}/delete`, { reason }),
   moderationQueue: () => api<Listing[]>('/admin/listings'),
+  updateListing: (id: string, input: ListingInput) =>
+    api<Listing>(`/admin/listings/${id}`, { method: 'PUT', body: input }),
   deactivateListing: (id: string, reason: string) =>
     post<Listing>(`/admin/listings/${id}/deactivate`, { reason }),
   activateListing: (id: string) => post<Listing>(`/admin/listings/${id}/activate`),

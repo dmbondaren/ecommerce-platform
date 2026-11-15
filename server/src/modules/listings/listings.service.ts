@@ -185,8 +185,15 @@ export const listingService = {
     return toListing(listing)
   },
 
-  async update(ownerId: string, id: string, input: ListingInput) {
-    const current = await findOwned(ownerId, id)
+  /**
+   * Edits a listing. Normally only its owner may; `asStaff` lets a moderator
+   * correct someone else's listing, which never touches the owner's payment
+   * account and does not send the listing back for review.
+   */
+  async update(editorId: string, id: string, input: ListingInput, options = { asStaff: false }) {
+    const current = options.asStaff ? await prisma.listing.findUnique({ where: { id } }) : await findOwned(editorId, id)
+    if (!current) throw notFound('Listing')
+    const ownerId = current.ownerId
     if (current.status === 'SOLD' || current.status === 'ARCHIVED') {
       throw conflict('A sold listing cannot be edited')
     }
@@ -194,9 +201,11 @@ export const listingService = {
       throw conflict('This listing is reserved by a buyer and cannot be edited until the payment is settled')
     }
     await assertCategoryExists(input.categoryId)
-    const { imageUrls, fields } = toColumns(input)
-    const flag = screenListing(input.title, input.description)
-    const held = current.status === 'DEACTIVATED' || current.status === 'PENDING_REVIEW'
+    const { imageUrls, fields: allFields } = toColumns(input)
+    // A moderator does not know the owner's account, so it stays as it is.
+    const fields = options.asStaff ? { ...allFields, paymentAccount: undefined } : allFields
+    const flag = options.asStaff ? null : screenListing(input.title, input.description)
+    const held = !options.asStaff && (current.status === 'DEACTIVATED' || current.status === 'PENDING_REVIEW')
     const updated = await prisma.listing.update({
       where: { id },
       data: {
@@ -207,7 +216,7 @@ export const listingService = {
       },
       include: listingInclude,
     })
-    await rememberPaymentAccount(ownerId, input.paymentAccount)
+    if (!options.asStaff) await rememberPaymentAccount(ownerId, input.paymentAccount)
     if (flag) await reportToModerators(id, flag)
     announce(updated.id, updated.status)
 

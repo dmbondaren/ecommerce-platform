@@ -7,6 +7,8 @@ export interface Mail {
   subject: string
   heading: string
   body: string
+  /** Picture shown above the text, e.g. the cover photo of a purchased item. */
+  imageUrl?: string
   /** Label/value pairs shown as a table, e.g. bank transfer details. */
   details?: [label: string, value: string][]
   action?: { label: string; url: string }
@@ -33,10 +35,14 @@ export function renderMail(mail: Mail): string {
         )
         .join('')}</table>`
     : ''
+  const image = mail.imageUrl
+    ? `<img src="${escapeHtml(mail.imageUrl)}" alt="" width="456" style="display:block;width:100%;max-width:456px;height:auto;border-radius:10px;margin:0 0 20px">`
+    : ''
   return `<!doctype html>
 <html lang="en">
   <body style="margin:0;background:#f4f6f5;font-family:Helvetica,Arial,sans-serif;color:#10231f">
     <div style="max-width:520px;margin:32px auto;background:#ffffff;border:1px solid #dfe7e4;border-radius:12px;padding:32px">
+      ${image}
       <h1 style="margin:0 0 12px;font-size:22px">${escapeHtml(mail.heading)}</h1>
       <p style="margin:0;line-height:1.6;color:#44605a">${escapeHtml(mail.body)}</p>
       ${details}

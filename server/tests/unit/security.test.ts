@@ -66,6 +66,25 @@ describe('token helpers', () => {
   })
 })
 
+describe('e-mail with a picture and details', () => {
+  it('renders both, escaped', () => {
+    const html = renderMail({
+      to: 'a@example.com',
+      subject: 'Receipt',
+      heading: 'Thank you',
+      body: 'Body',
+      imageUrl: 'https://example.com/uploads/a.jpg?x="1"',
+      details: [['Item', 'Lamp <b>new</b>']],
+    })
+    expect(html).toContain('<img src="https://example.com/uploads/a.jpg?x=&quot;1&quot;"')
+    expect(html).toContain('Lamp &lt;b&gt;new&lt;/b&gt;')
+  })
+
+  it('leaves the picture out when there is none', () => {
+    expect(renderMail({ to: 'a@example.com', subject: 's', heading: 'h', body: 'b' })).not.toContain('<img')
+  })
+})
+
 describe('parseSender', () => {
   it('splits a display name from the address', () => {
     expect(parseSender('Marketplace <no-reply@example.com>')).toEqual({ name: 'Marketplace', email: 'no-reply@example.com' })

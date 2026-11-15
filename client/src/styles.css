@@ -2557,3 +2557,56 @@ tbody tr {
   margin-top: 16px;
   font-size: 0.8rem;
 }
+
+/* ---------- Alerts that must not be missed ---------- */
+.toast-alert {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--accent) 50%, transparent);
+  animation: toast-in 0.35s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+.toast-alert a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateY(16px) scale(0.92);
+    opacity: 0;
+  }
+}
+
+/* Unread messages and notifications keep pulsing until they are opened. */
+.counter.pulse {
+  background: #e11d2e;
+  color: #fff;
+  animation: pulse 1.6s ease-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(225 29 46 / 70%);
+  }
+
+  100% {
+    box-shadow: 0 0 0 10px rgb(225 29 46 / 0%);
+  }
+}
+
+.row-item.unread {
+  border-left: 4px solid var(--accent);
+  font-weight: 600;
+}
+
+.receipt {
+  opacity: 0.8;
+}
+
+.receipt.seen {
+  opacity: 1;
+  font-weight: 700;
+}
