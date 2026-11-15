@@ -83,7 +83,7 @@ client/
 - **Messages go over HTTP, events over WebSocket.** Sending is validated, rate-limited and answered with a status code; the socket only pushes results. The client turns events into cache invalidations, so no screen knows about the socket.
 - **Uploads.** File names are generated on the server, the extension comes from an allow-list, and the API only accepts image URLs that its own upload endpoint produced.
 - **Errors.** Every error leaves the API as `{ error: { code, message, details } }`; unknown errors are logged and answered with a generic 500. On the client an error boundary, per-query error states with retry, and toasts for failed actions mean a failure never ends in a blank page.
-- **No account enumeration.** Login and password reset answer the same way whether or not the e-mail exists, and login takes the same time in both cases.
+- **Login gives nothing away.** A wrong e-mail and a wrong password get the same answer in the same time. Password reset, by contrast, says plainly when an address has no account: registration reveals that anyway, and a clear answer helps people who mistyped; both endpoints are rate limited.
 
 ## Running it locally
 

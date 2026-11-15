@@ -97,24 +97,38 @@ async function sendViaBrevo(apiKey: string, mail: Mail): Promise<void> {
 export const mailTransport = (): 'brevo' | 'smtp' | 'log' =>
   env.BREVO_API_KEY ? 'brevo' : env.SMTP_HOST ? 'smtp' : 'log'
 
+let lastFailure: { at: Date; message: string } | null = null
+
+/** The most recent delivery failure since the process started, for the admin's System page. */
+export const lastMailFailure = () => lastFailure
+
 export const mailer = {
-  /** Without SMTP settings the message is logged, which keeps local development self-contained. */
   async send(mail: Mail): Promise<void> {
-    if (env.BREVO_API_KEY) {
-      await sendViaBrevo(env.BREVO_API_KEY, mail)
-      return
+    try {
+      await deliver(mail)
+    } catch (err) {
+      lastFailure = { at: new Date(), message: err instanceof Error ? err.message : String(err) }
+      throw err
     }
-    const transport = getTransporter()
-    if (!transport) {
-      logger.info({ to: mail.to, subject: mail.subject, action: mail.action?.url }, 'E-mail not sent (SMTP is not configured)')
-      return
-    }
-    await transport.sendMail({
-      from: env.MAIL_FROM,
-      to: mail.to,
-      subject: mail.subject,
-      html: renderMail(mail),
-      text: textOf(mail),
-    })
   },
+}
+
+/** Without any mail settings the message is logged, which keeps local development self-contained. */
+async function deliver(mail: Mail): Promise<void> {
+  if (env.BREVO_API_KEY) {
+    await sendViaBrevo(env.BREVO_API_KEY, mail)
+    return
+  }
+  const transport = getTransporter()
+  if (!transport) {
+    logger.info({ to: mail.to, subject: mail.subject, action: mail.action?.url }, 'E-mail not sent (SMTP is not configured)')
+    return
+  }
+  await transport.sendMail({
+    from: env.MAIL_FROM,
+    to: mail.to,
+    subject: mail.subject,
+    html: renderMail(mail),
+    text: textOf(mail),
+  })
 }

@@ -117,8 +117,8 @@ export function ForgotPassword() {
     <AuthCard title="Reset your password" footer={<Link to="/login">Back to sign in</Link>}>
       {sent ? (
         <p role="status">
-          If an account exists for <strong>{email}</strong>, a link to choose a new password is on its way. It is
-          valid for one hour.
+          We sent a link to choose a new password to <strong>{email}</strong>. It is valid for one hour. If it
+          does not arrive within a few minutes, check the spam folder.
         </p>
       ) : (
         <form className="form" onSubmit={form.onSubmit}>

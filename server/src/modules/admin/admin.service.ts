@@ -4,7 +4,7 @@ import { env } from '../../config/env'
 import { AppError, conflict, forbidden, notFound } from '../../lib/errors'
 import { paginated } from '../../lib/http'
 import { prisma } from '../../lib/prisma'
-import { mailer, mailTransport, parseSender } from '../../mail/mailer'
+import { lastMailFailure, mailer, mailTransport, parseSender } from '../../mail/mailer'
 import { isAdminRole, type AuthContext } from '../../middleware/auth'
 import { hub } from '../../realtime/hub'
 import { listingInclude, toListing } from '../listings/listing.dto'
@@ -220,7 +220,11 @@ export const adminService = {
   /** How this deployment is set up, without revealing any secret. */
   system() {
     return {
-      mail: { transport: mailTransport(), sender: parseSender(env.MAIL_FROM).email },
+      mail: {
+        transport: mailTransport(),
+        sender: parseSender(env.MAIL_FROM).email,
+        lastFailure: lastMailFailure(),
+      },
       autoVerifyEmail: env.AUTO_VERIFY_EMAIL,
       storage: env.STORAGE_DRIVER,
       paymentWindowMinutes: env.PAYMENT_WINDOW_MINUTES,

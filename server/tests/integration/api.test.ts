@@ -61,6 +61,15 @@ describe('authentication', () => {
     expect(login.body.user).not.toHaveProperty('passwordHash')
   })
 
+  it('answers a password reset for an unknown address plainly', async () => {
+    const response = await request(app)
+      .post(`${api}/auth/password-reset/request`)
+      .send({ email: 'nobody@example.com' })
+      .expect(404)
+    expect(response.body.error.message).toBe('There is no account with this e-mail address')
+    await request(app).post(`${api}/auth/password-reset/request`).send({ email: 'auth@example.com' }).expect(202)
+  })
+
   it('validates input and protects private routes', async () => {
     const invalid = await request(app).post(`${api}/auth/register`).send({ email: 'nope', password: '1' }).expect(400)
     expect(invalid.body.error.code).toBe('BAD_REQUEST')

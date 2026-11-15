@@ -389,6 +389,14 @@ function System() {
               <dd>{system.mail.sender}</dd>
             </div>
             <div>
+              <dt>Last failed delivery</dt>
+              <dd>
+                {system.mail.lastFailure
+                  ? `${timeAgo(system.mail.lastFailure.at)}: ${system.mail.lastFailure.message}`
+                  : 'None since the server started'}
+              </dd>
+            </div>
+            <div>
               <dt>Sign-up confirmation</dt>
               <dd>
                 {system.autoVerifyEmail

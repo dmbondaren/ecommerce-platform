@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt'
 import type { AuthTokenType, User } from '@prisma/client'
 import { env } from '../../config/env'
 import { randomToken, sha256 } from '../../lib/crypto'
-import { badRequest, conflict, forbidden, unauthorized } from '../../lib/errors'
+import { AppError, badRequest, conflict, forbidden, unauthorized } from '../../lib/errors'
 import { logger } from '../../lib/logger'
 import { prisma } from '../../lib/prisma'
 import { mailer } from '../../mail/mailer'
@@ -83,17 +83,31 @@ async function issueSession(user: User, userAgent?: string): Promise<Session> {
   }
 }
 
+/** For e-mails the user is waiting for: a failed delivery is reported instead of hidden. */
+async function sendOrFail(mail: Parameters<typeof mailer.send>[0]) {
+  try {
+    await mailer.send(mail)
+  } catch (err) {
+    logger.error({ err, to: mail.to }, 'Failed to send e-mail')
+    throw new AppError(502, 'MAIL_FAILED', 'The e-mail could not be sent. Please try again in a few minutes.')
+  }
+}
+
+const verificationMail = (user: User, token: string) => ({
+  to: user.email,
+  subject: 'Confirm your e-mail address',
+  heading: 'Welcome to Marketplace',
+  body: 'Please confirm your e-mail address to finish setting up your account.',
+  action: {
+    label: 'Confirm e-mail',
+    url: `${env.CLIENT_URL}/verify-email?token=${encodeURIComponent(token)}`,
+  },
+})
+
+/** At sign-up the account matters more than the e-mail: a failed delivery is logged, and the user can ask again. */
 function sendVerificationMail(user: User, token: string) {
-  const link = `${env.CLIENT_URL}/verify-email?token=${encodeURIComponent(token)}`
-  // Mail delivery must never fail the request that triggered it.
   mailer
-    .send({
-      to: user.email,
-      subject: 'Confirm your e-mail address',
-      heading: 'Welcome to Marketplace',
-      body: 'Please confirm your e-mail address to finish setting up your account.',
-      action: { label: 'Confirm e-mail', url: link },
-    })
+    .send(verificationMail(user, token))
     .catch((err: unknown) => logger.warn({ err }, 'Failed to send verification e-mail'))
 }
 
@@ -182,24 +196,28 @@ export const authService = {
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (!user || user.emailVerifiedAt) return
     const token = await createAuthToken(user.id, 'EMAIL_VERIFICATION', EMAIL_VERIFICATION_TTL_MS)
-    sendVerificationMail(user, token)
+    await sendOrFail(verificationMail(user, token))
   },
 
-  /** Always resolves, whether or not the e-mail belongs to an account. */
+  /**
+   * Says plainly when no account has this e-mail. Registration already
+   * reveals which addresses are taken, so hiding it here would only confuse
+   * people who mistyped; the endpoint is rate limited against guessing.
+   */
   async requestPasswordReset(email: string): Promise<void> {
     const user = await prisma.user.findUnique({ where: { email: normalizeEmail(email) } })
-    if (!user) return
+    if (!user) throw new AppError(404, 'NOT_FOUND', 'There is no account with this e-mail address')
     const token = await createAuthToken(user.id, 'PASSWORD_RESET', PASSWORD_RESET_TTL_MS)
-    const link = `${env.CLIENT_URL}/reset-password?token=${encodeURIComponent(token)}`
-    mailer
-      .send({
-        to: user.email,
-        subject: 'Reset your password',
-        heading: 'Password reset',
-        body: 'Use the button below to choose a new password. The link is valid for one hour. If you did not ask for this, you can ignore this e-mail.',
-        action: { label: 'Choose a new password', url: link },
-      })
-      .catch((err: unknown) => logger.warn({ err }, 'Failed to send password reset e-mail'))
+    await sendOrFail({
+      to: user.email,
+      subject: 'Reset your password',
+      heading: 'Password reset',
+      body: 'Use the button below to choose a new password. The link is valid for one hour. If you did not ask for this, you can ignore this e-mail.',
+      action: {
+        label: 'Choose a new password',
+        url: `${env.CLIENT_URL}/reset-password?token=${encodeURIComponent(token)}`,
+      },
+    })
   },
 
   async resetPassword(token: string, newPassword: string): Promise<void> {

@@ -161,7 +161,11 @@ export const adminApi = {
   resolveReport: (id: string) => post<Report>(`/admin/reports/${id}/resolve`),
   system: () =>
     api<{
-      mail: { transport: 'brevo' | 'smtp' | 'log'; sender: string }
+      mail: {
+        transport: 'brevo' | 'smtp' | 'log'
+        sender: string
+        lastFailure: { at: string; message: string } | null
+      }
       autoVerifyEmail: boolean
       storage: string
       paymentWindowMinutes: number

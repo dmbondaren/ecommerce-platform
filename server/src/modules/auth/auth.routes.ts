@@ -72,8 +72,7 @@ authRouter.post('/resend-verification', authLimiter, requireAuth, async (req, re
 
 authRouter.post('/password-reset/request', authLimiter, async (req, res) => {
   await authService.requestPasswordReset(parse(z.object({ email: emailSchema }), req.body).email)
-  // Same answer whether or not the account exists.
-  res.status(202).json({ message: 'If an account exists for this e-mail, a reset link has been sent' })
+  res.status(202).json({ message: 'A reset link has been sent' })
 })
 
 authRouter.post('/password-reset/confirm', authLimiter, async (req, res) => {
