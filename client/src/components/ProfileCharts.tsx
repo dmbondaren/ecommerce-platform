@@ -1,8 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { userApi } from '../api/endpoints'
 import type { CategoryCount, Deal } from '../api/types'
 import { t } from '../app/i18n'
 import { formatDate, formatPrice } from '../lib/format'
+import { Modal } from './ui'
 
 const MAX_SLICES = 5
 
@@ -76,7 +79,56 @@ function DealsChart({ deals, currency }: { deals: Deal[]; currency: string }) {
   )
 }
 
-function DealsCard({ title, deals }: { title: string; deals: Deal[] }) {
+/** The item exactly as it was sold: the order keeps its own copy of the listing. */
+function DealDialog({ deal, onClose }: { deal: Deal; onClose: () => void }) {
+  return (
+    <Modal title={deal.title} onClose={onClose}>
+      <div className="modal-body">
+        {deal.imageUrls.length > 0 && (
+          <div className="order-photos">
+            {deal.imageUrls.map((url) => (
+              <a key={url} href={url} target="_blank" rel="noreferrer">
+                <img src={url} alt="" loading="lazy" />
+              </a>
+            ))}
+          </div>
+        )}
+        <p className="price">{formatPrice(deal.price, deal.currency)}</p>
+        <p className="muted">
+          {t(deal.category)} · {formatDate(deal.date)}
+        </p>
+        <p className="prose">{deal.description}</p>
+      </div>
+      {deal.listingId && (
+        <footer className="modal-footer">
+          <Link className="btn btn-secondary btn-md" to={`/listings/${deal.listingId}`}>
+            {t('Open the listing')}
+          </Link>
+        </footer>
+      )}
+    </Modal>
+  )
+}
+
+function DealRows({ deals, onOpen }: { deals: Deal[]; onOpen: (deal: Deal) => void }) {
+  return (
+    <ul className="deal-list">
+      {deals.map((deal) => (
+        <li key={deal.id}>
+          <button type="button" onClick={() => onOpen(deal)}>
+            <span>
+              <strong>{deal.title}</strong>
+              <span className="muted">{formatDate(deal.date)}</span>
+            </span>
+            <strong>{formatPrice(deal.price, deal.currency)}</strong>
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function DealsCard({ title, deals, onOpen }: { title: string; deals: Deal[]; onOpen: (deal: Deal) => void }) {
   const currency = mainCurrency(deals)
   const charted = deals.filter((deal) => deal.currency === currency)
   return (
@@ -90,20 +142,7 @@ function DealsCard({ title, deals }: { title: string; deals: Deal[] }) {
       ) : (
         <>
           <DealsChart deals={charted} currency={currency} />
-          <ul className="deal-list">
-            {deals
-              .slice(-4)
-              .reverse()
-              .map((deal, index) => (
-                <li key={index}>
-                  <span>
-                    <strong>{deal.title}</strong>
-                    <span className="muted">{formatDate(deal.date)}</span>
-                  </span>
-                  <strong>{formatPrice(deal.price, deal.currency)}</strong>
-                </li>
-              ))}
-          </ul>
+          <DealRows deals={deals.slice(-4).reverse()} onOpen={onOpen} />
         </>
       )}
     </section>
@@ -116,7 +155,15 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 const GAP = 2.5
 
 /** Share of each category. The legend carries names and counts, so colour is never the only cue. */
-function CategoryCard({ title, counts }: { title: string; counts: CategoryCount[] }) {
+function CategoryCard({
+  title,
+  counts,
+  onSelect,
+}: {
+  title: string
+  counts: CategoryCount[]
+  onSelect: (category: string) => void
+}) {
   const slices = topSlices(counts)
   const total = slices.reduce((sum, slice) => sum + slice.count, 0)
   let offset = 0
@@ -149,6 +196,7 @@ function CategoryCard({ title, counts }: { title: string; counts: CategoryCount[
                     strokeWidth={16}
                     strokeDasharray={dash}
                     strokeDashoffset={-start}
+                    onClick={slice.name === 'Other' ? undefined : () => onSelect(slice.name)}
                   >
                     <title>{`${t(slice.name)}: ${slice.count}`}</title>
                   </circle>
@@ -162,9 +210,12 @@ function CategoryCard({ title, counts }: { title: string; counts: CategoryCount[
           <ul className="legend">
             {slices.map((slice, index) => (
               <li key={slice.name}>
-                <span className={`swatch series-${index + 1}`} aria-hidden="true" />
-                <span>{t(slice.name)}</span>
-                <strong>{slice.count}</strong>
+                {/* "Other" stands for several categories, so there is no single list behind it. */}
+                <button type="button" disabled={slice.name === 'Other'} onClick={() => onSelect(slice.name)}>
+                  <span className={`swatch series-${index + 1}`} aria-hidden="true" />
+                  <span>{t(slice.name)}</span>
+                  <strong>{slice.count}</strong>
+                </button>
               </li>
             ))}
           </ul>
@@ -174,19 +225,50 @@ function CategoryCard({ title, counts }: { title: string; counts: CategoryCount[
   )
 }
 
-/** The statistics block of a public profile: what the user sold and bought, and in which categories. */
-export function ProfileCharts({ userId }: { userId: string }) {
+interface Props {
+  userId: string
+  /** Called when a category of the user's current listings is picked. */
+  onListingCategory: (category: string) => void
+}
+
+/**
+ * The statistics block of a public profile: what the user sold and bought,
+ * and in which categories. Everything leads somewhere: a deal opens the item
+ * as it was sold, a category opens the items behind it.
+ */
+export function ProfileCharts({ userId, onListingCategory }: Props) {
   const query = useQuery({ queryKey: ['users', userId, 'activity'], queryFn: () => userApi.activity(userId) })
+  const [deal, setDeal] = useState<Deal | null>(null)
+  const [group, setGroup] = useState<{ title: string; deals: Deal[] } | null>(null)
   const activity = query.data
   if (!activity) return null
 
+  const openGroup = (title: string, deals: Deal[]) => (category: string) =>
+    setGroup({ title: `${title}: ${t(category)}`, deals: deals.filter((item) => item.category === category).reverse() })
+
   return (
     <div className="stat-grid">
-      <DealsCard title={t('Sales over time')} deals={activity.sales} />
-      <DealsCard title={t('Purchases over time')} deals={activity.purchases} />
-      <CategoryCard title={t('Listing categories')} counts={activity.listingCategories} />
-      <CategoryCard title={t('Sales by category')} counts={activity.saleCategories} />
-      <CategoryCard title={t('Purchases by category')} counts={activity.purchaseCategories} />
+      <DealsCard title={t('Sales over time')} deals={activity.sales} onOpen={setDeal} />
+      <DealsCard title={t('Purchases over time')} deals={activity.purchases} onOpen={setDeal} />
+      <CategoryCard title={t('Listing categories')} counts={activity.listingCategories} onSelect={onListingCategory} />
+      <CategoryCard
+        title={t('Sales by category')}
+        counts={activity.saleCategories}
+        onSelect={openGroup(t('Sold'), activity.sales)}
+      />
+      <CategoryCard
+        title={t('Purchases by category')}
+        counts={activity.purchaseCategories}
+        onSelect={openGroup(t('Bought'), activity.purchases)}
+      />
+      {group && !deal && (
+        <Modal title={group.title} onClose={() => setGroup(null)}>
+          <div className="modal-body">
+            <DealRows deals={group.deals} onOpen={setDeal} />
+          </div>
+        </Modal>
+      )}
+      {deal && <DealDialog deal={deal} onClose={() => setDeal(null)} />}
     </div>
   )
 }

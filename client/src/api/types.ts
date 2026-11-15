@@ -25,6 +25,8 @@ export interface Account extends PublicUser {
   role: Role
   phone: string | null
   preferredCurrency: Currency
+  /** Where buyers transfer money; the default for new listings. */
+  paymentAccount: string | null
   /** Private; only used to find listings nearby. */
   homeAddress: string | null
   homeCoordinates: Coordinates | null
@@ -88,6 +90,7 @@ export interface ListingInput {
   phone: string
   imageUrls: string[]
   coordinates: Coordinates | null
+  paymentAccount: string
 }
 
 export interface Page<T> {
@@ -128,6 +131,8 @@ export interface PaymentDetails {
 /** An order as its buyer sees it: unpaid ones carry the transfer details. */
 export interface Purchase extends Order {
   payment: PaymentDetails | null
+  /** The buyer chose not to review this purchase. */
+  reviewSkipped: boolean
 }
 
 export interface SalesSummary {
@@ -234,6 +239,10 @@ export type ServerEvent =
   | { type: 'account.suspended' }
 
 export interface Deal {
+  id: string
+  listingId: string | null
+  description: string
+  imageUrls: string[]
   title: string
   price: number
   currency: string

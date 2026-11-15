@@ -24,6 +24,7 @@ interface FormState {
   phone: string
   imageUrls: string[]
   coordinates: Coordinates | null
+  paymentAccount: string
 }
 
 /**
@@ -32,7 +33,7 @@ interface FormState {
  */
 function EditorForm({ listing, template }: { listing?: Listing; template?: Listing }) {
   const source = listing ?? template
-  const { user } = useAuth()
+  const { user, setUser } = useAuth()
   const navigate = useNavigate()
   const client = useQueryClient()
   const categories = useQuery({ queryKey: keys.categories, queryFn: listingApi.categories, staleTime: Infinity })
@@ -46,6 +47,8 @@ function EditorForm({ listing, template }: { listing?: Listing; template?: Listi
     phone: source?.phone ?? user?.phone ?? '',
     imageUrls: source?.imageUrls ?? [],
     coordinates: source?.coordinates ?? null,
+    // Remembered from the user's last listing, so it only has to be typed once.
+    paymentAccount: user?.paymentAccount ?? '',
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<unknown>(null)
@@ -60,6 +63,8 @@ function EditorForm({ listing, template }: { listing?: Listing; template?: Listi
     try {
       const saved = listing ? await listingApi.update(listing.id, input) : await listingApi.create(input)
       await client.invalidateQueries({ queryKey: keys.listings })
+      // The payment account just saved is the default for the next listing.
+      if (user && form.paymentAccount.trim()) setUser({ ...user, paymentAccount: form.paymentAccount.trim() })
       toast.success(listing ? 'Changes saved' : 'Your listing is live')
       navigate(`/listings/${saved.id}`)
     } catch (err) {
@@ -163,6 +168,23 @@ function EditorForm({ listing, template }: { listing?: Listing; template?: Listi
           )}
         </Field>
       </div>
+
+      <Field
+        label={t('Account for payments (optional)')}
+        errors={errors.paymentAccount}
+        hint={t('For example your IBAN. A buyer sees it only after reserving the item. It is remembered for your next listings.')}
+      >
+        {(props) => (
+          <input
+            {...props}
+            maxLength={64}
+            autoComplete="off"
+            placeholder="CH00 0000 0000 0000 0000 0"
+            value={form.paymentAccount}
+            onChange={(event) => set('paymentAccount', event.target.value)}
+          />
+        )}
+      </Field>
 
       <LocationPicker
         address={form.location}

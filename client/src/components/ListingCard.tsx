@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
 import type { Listing } from '../api/types'
-import { formatPrice, STATUS_LABELS, timeAgo } from '../lib/format'
+import { STATUS_LABELS, timeAgo } from '../lib/format'
 import { Icon } from './Icon'
+import { usePrices } from '../app/currency'
 import { t } from '../app/i18n'
 
 interface Props {
@@ -22,6 +23,7 @@ export function ListingImage({ src, alt }: { src: string | undefined | null; alt
 }
 
 export function ListingCard({ listing, favorite = false, onToggleFavorite }: Props) {
+  const price = usePrices().show(listing.price, listing.currency)
   return (
     <article className={listing.status === 'ACTIVE' ? 'card listing-card' : 'card listing-card dimmed'}>
       <Link to={`/listings/${listing.id}`} className="listing-card-media" tabIndex={-1} aria-hidden="true">
@@ -40,7 +42,9 @@ export function ListingCard({ listing, favorite = false, onToggleFavorite }: Pro
         </button>
       )}
       <div className="listing-card-body">
-        <p className="price">{formatPrice(listing.price, listing.currency)}</p>
+        <p className="price" title={price.original ?? undefined}>
+          {price.text}
+        </p>
         <h3>
           <Link to={`/listings/${listing.id}`}>{listing.title}</Link>
         </h3>

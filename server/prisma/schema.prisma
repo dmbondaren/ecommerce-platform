@@ -73,6 +73,8 @@ model User {
   avatarUrl         String?
   preferredCurrency String    @default("CHF") @db.VarChar(3)
   /// Optional and private: only used to find listings near the user.
+  /// Where buyers should transfer money (e.g. an IBAN); the default for the user's new listings.
+  paymentAccount    String?
   homeAddress       String?
   homeLatitude      Float?
   homeLongitude     Float?
@@ -153,6 +155,8 @@ model Listing {
   currency         String        @default("CHF") @db.VarChar(3)
   location         String?
   /// Optional pin on the map; both are set or both are null.
+  /// Shown to a buyer only after they have reserved the item.
+  paymentAccount   String?
   latitude         Float?
   longitude        Float?
   phone            String?
@@ -241,6 +245,10 @@ model Order {
   paymentReference    String?     @unique
   expiresAt           DateTime?
   paidAt              DateTime?
+  /// The seller's payment account at the time of the order, if they gave one.
+  paymentAccount      String?
+  /// Set when the buyer chose not to review the purchase, which ends the reminder.
+  reviewSkippedAt     DateTime?
   createdAt           DateTime    @default(now())
 
   buyer   User?    @relation("OrderBuyer", fields: [buyerId], references: [id], onDelete: SetNull)

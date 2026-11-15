@@ -2446,3 +2446,114 @@ tbody tr {
   object-fit: cover;
   border-radius: var(--radius-sm);
 }
+
+/* ---------- Interactive statistics ---------- */
+.deal-list li {
+  padding: 0;
+  background: none;
+}
+
+.deal-list button {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.deal-list button > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.deal-list button:hover {
+  border-color: var(--accent);
+}
+
+.legend li {
+  display: block;
+}
+
+.legend button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 6px;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.legend button:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.legend button:disabled {
+  cursor: default;
+}
+
+.donut circle {
+  cursor: pointer;
+  transition: stroke-width 0.15s;
+}
+
+.donut circle:hover {
+  stroke-width: 19;
+}
+
+/* ---------- Saved state ---------- */
+.header-link.highlighted {
+  color: #d92d20;
+}
+
+.pop {
+  animation: pop 0.3s;
+}
+
+.btn.saved {
+  background: color-mix(in srgb, #d92d20 12%, transparent);
+  color: #d92d20;
+}
+
+.btn.saved svg {
+  fill: currentColor;
+}
+
+/* ---------- Review reminder ---------- */
+.review-banner {
+  background: color-mix(in srgb, var(--star) 22%, var(--surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--star) 55%, var(--border));
+}
+
+.review-banner .pay-banner-inner > svg {
+  color: var(--star);
+}
+
+.review-prompt {
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--star) 18%, transparent);
+  border-radius: var(--radius-sm);
+}
+
+.price-original {
+  margin-left: 10px;
+  color: var(--muted);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.rates-note {
+  margin-top: 16px;
+  font-size: 0.8rem;
+}

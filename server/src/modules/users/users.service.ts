@@ -24,6 +24,10 @@ export const accountPatchSchema = z.object({
 export type AccountPatch = z.infer<typeof accountPatchSchema>
 
 const dealSelect = {
+  id: true,
+  listingId: true,
+  descriptionSnapshot: true,
+  imageUrlsSnapshot: true,
   titleSnapshot: true,
   price: true,
   currency: true,
@@ -33,6 +37,10 @@ const dealSelect = {
 } as const
 
 interface DealRow {
+  id: string
+  listingId: string | null
+  descriptionSnapshot: string
+  imageUrlsSnapshot: string[]
   titleSnapshot: string
   price: { toNumber(): number }
   currency: string
@@ -42,6 +50,10 @@ interface DealRow {
 }
 
 const toDeal = (order: DealRow) => ({
+  id: order.id,
+  listingId: order.listingId,
+  description: order.descriptionSnapshot,
+  imageUrls: order.imageUrlsSnapshot,
   title: order.titleSnapshot,
   price: order.price.toNumber(),
   currency: order.currency,

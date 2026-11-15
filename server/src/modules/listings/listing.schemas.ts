@@ -32,6 +32,14 @@ export const listingInputSchema = z.object({
   location: z.string().trim().max(120).nullish().transform((value) => value || null),
   phone: phoneSchema.nullish().transform((value) => value ?? null),
   imageUrls: z.array(uploadUrlSchema).min(1, 'Add at least one photo').max(10),
+  /** Where the buyer should transfer the money, e.g. an IBAN. Never part of the public listing. */
+  paymentAccount: z
+    .string()
+    .trim()
+    .max(64)
+    .regex(/^[A-Za-z0-9 +-]*$/, 'Use letters, digits and spaces only')
+    .nullish()
+    .transform((value) => value || null),
   /** Optional pin on the map. */
   coordinates: z
     .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) })

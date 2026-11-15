@@ -41,8 +41,9 @@ export const toOrder = (order: OrderRow) => ({
 
 /** What the buyer needs to make the transfer. Only ever sent to the buyer. */
 const paymentDetails = (order: OrderRow) => ({
-  recipient: env.PAYMENT_RECIPIENT,
-  iban: env.PAYMENT_IBAN,
+  // The seller's own account when they gave one, otherwise the demo account of the platform.
+  recipient: order.paymentAccount ? (order.seller?.nickname ?? 'Seller') : env.PAYMENT_RECIPIENT,
+  iban: order.paymentAccount ?? env.PAYMENT_IBAN,
   reference: order.paymentReference,
   amount: order.price.toNumber(),
   currency: order.currency,
@@ -51,6 +52,7 @@ const paymentDetails = (order: OrderRow) => ({
 const toPurchase = (order: OrderRow) => ({
   ...toOrder(order),
   payment: order.status === 'PENDING_PAYMENT' ? paymentDetails(order) : null,
+  reviewSkipped: order.reviewSkippedAt !== null,
 })
 
 /** Short and unambiguous to type into a banking app, e.g. "MP-7K3F9QXA". */
@@ -90,8 +92,8 @@ function sendPaymentInstructions(buyerId: string, orders: OrderRow[]) {
         body: `"${order.titleSnapshot}" is reserved for you for ${env.PAYMENT_WINDOW_MINUTES} minutes. Transfer the amount using the details below, then confirm the payment on the website. If the time runs out, the reservation is released and the item goes back on sale.`,
         details: [
           ['Amount', amountOf(order)],
-          ['Recipient', env.PAYMENT_RECIPIENT],
-          ['IBAN', env.PAYMENT_IBAN],
+          ['Recipient', paymentDetails(order).recipient],
+          ['Account', paymentDetails(order).iban],
           ['Reference', order.paymentReference ?? order.id],
         ],
         action: { label: 'I have paid', url: `${env.CLIENT_URL}/account/purchases` },
@@ -139,6 +141,7 @@ export const orderService = {
             imageUrlsSnapshot: listing.images.map((image) => image.url),
             status: 'PENDING_PAYMENT',
             paymentReference: newPaymentReference(),
+            paymentAccount: listing.paymentAccount,
             expiresAt,
           },
         })
@@ -224,6 +227,15 @@ export const orderService = {
       }
     })
     return toPurchase(order)
+  },
+
+  /** The buyer does not want to review a purchase; this only ends the reminder. */
+  async skipReview(buyerId: string, orderId: string) {
+    const skipped = await prisma.order.updateMany({
+      where: { id: orderId, buyerId, status: 'PAID' },
+      data: { reviewSkippedAt: new Date() },
+    })
+    if (skipped.count === 0) throw notFound('Order')
   },
 
   /** The buyer gives the reservation up, and the listing goes back on sale. */

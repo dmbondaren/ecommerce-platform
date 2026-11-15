@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { adminApi, chatApi, listingApi, orderApi } from '../api/endpoints'
 import type { Listing } from '../api/types'
 import { useAuth } from '../app/auth'
+import { usePrices } from '../app/currency'
 import { useDocumentTitle, useRequireLogin, useSavedListings } from '../app/hooks'
 import { keys } from '../app/queryClient'
 import { toast } from '../app/toast'
@@ -111,6 +112,7 @@ function Actions({ listing }: { listing: Listing }) {
               variant="ghost"
               size="sm"
               icon="heart"
+              className={saved.favoriteIds.has(listing.id) ? 'saved' : undefined}
               aria-pressed={saved.favoriteIds.has(listing.id)}
               onClick={() => saved.toggleFavorite(listing.id)}
             >
@@ -187,6 +189,8 @@ function Actions({ listing }: { listing: Listing }) {
           onClose={() => setDialog(null)}
           onSubmit={async (reason) => {
             await listingApi.report(listing.id, reason, [])
+            // A moderator who files a report should see it in the queue straight away.
+            await client.invalidateQueries({ queryKey: ['admin'] })
             toast.success(t('Thank you. Our team will look into it.'))
           }}
         />
@@ -228,6 +232,7 @@ export function ListingDetail() {
   const { user } = useAuth()
   const query = useQuery({ queryKey: keys.listing(id), queryFn: () => listingApi.get(id) })
   useDocumentTitle(query.data?.title)
+  const prices = usePrices()
 
   const userId = user?.id
   useEffect(() => {
@@ -237,7 +242,9 @@ export function ListingDetail() {
 
   return (
     <QueryView query={query}>
-      {(listing) => (
+      {(listing) => {
+        const price = prices.show(listing.price, listing.currency)
+        return (
         <article className={listing.status === 'RESERVED' || listing.status === 'SOLD' ? 'detail dimmed' : 'detail'}>
           <Gallery key={listing.id} images={listing.imageUrls} title={listing.title} />
           <div className="detail-side">
@@ -255,7 +262,10 @@ export function ListingDetail() {
             )}
             <p className="eyebrow">{t(listing.category.name)}</p>
             <h1>{listing.title}</h1>
-            <p className="price price-lg">{formatPrice(listing.price, listing.currency)}</p>
+            <p className="price price-lg">
+              {price.text}
+              {price.original && <span className="price-original">{price.original}</span>}
+            </p>
             <p className="meta">
               {listing.location && (
                 <span>
@@ -299,7 +309,8 @@ export function ListingDetail() {
             )}
           </section>
         </article>
-      )}
+        )
+      }}
     </QueryView>
   )
 }

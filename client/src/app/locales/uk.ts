@@ -686,4 +686,28 @@ export const uk: Record<string, string> = {
     'Резерв завершиться, і товар знову буде доступний усім.',
   'Shown on your profile and listings to signed-in users.':
     'Показується зареєстрованим користувачам у вашому профілі та оголошеннях.',
+  'Review reminder':
+    'Нагадування про відгук',
+  'How was your purchase?':
+    'Як вам покупка?',
+  'No review':
+    'Без відгуку',
+  'Show prices in':
+    'Показувати ціни у',
+  'Prices as listed':
+    'Ціни як в оголошенні',
+  'Prices in {currency}':
+    'Ціни в {currency}',
+  'Converted prices are approximate.':
+    'Перераховані ціни приблизні.',
+  'Account for payments (optional)':
+    'Рахунок для оплати (необов’язково)',
+  'For example your IBAN. A buyer sees it only after reserving the item. It is remembered for your next listings.':
+    'Наприклад, ваш IBAN. Покупець бачить його лише після резервування товару. Він запам’ятається для наступних оголошень.',
+  'Open the listing':
+    'Відкрити оголошення',
+  'Bought':
+    'Куплено',
+  'Show all':
+    'Показати всі',
 }

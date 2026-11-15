@@ -89,6 +89,11 @@ async function reportToModerators(listingId: string, reason: string) {
   }
 }
 
+/** A payment account given on a listing becomes the default for the owner's next listings. */
+async function rememberPaymentAccount(ownerId: string, paymentAccount: string | null) {
+  if (paymentAccount) await prisma.user.update({ where: { id: ownerId }, data: { paymentAccount } })
+}
+
 const announce = (listingId: string, status: string) =>
   hub.broadcast({ type: 'listing.changed', listingId, status })
 
@@ -174,6 +179,7 @@ export const listingService = {
       },
       include: listingInclude,
     })
+    await rememberPaymentAccount(ownerId, input.paymentAccount)
     if (flag) await reportToModerators(listing.id, flag)
     announce(listing.id, listing.status)
     return toListing(listing)
@@ -201,6 +207,7 @@ export const listingService = {
       },
       include: listingInclude,
     })
+    await rememberPaymentAccount(ownerId, input.paymentAccount)
     if (flag) await reportToModerators(id, flag)
     announce(updated.id, updated.status)
 

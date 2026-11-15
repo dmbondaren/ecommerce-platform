@@ -32,6 +32,7 @@ export const toAccount = (user: User) => ({
   phone: user.phone,
   preferredCurrency: user.preferredCurrency,
   // Private: never part of the public profile.
+  paymentAccount: user.paymentAccount,
   homeAddress: user.homeAddress,
   homeCoordinates:
     user.homeLatitude !== null && user.homeLongitude !== null

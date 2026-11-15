@@ -23,6 +23,11 @@ ordersRouter.post('/orders/:id/cancel', requireAuth, async (req, res) => {
   res.json(await orderService.cancel(getAuth(req).userId, param(req, 'id')))
 })
 
+ordersRouter.post('/orders/:id/skip-review', requireAuth, async (req, res) => {
+  await orderService.skipReview(getAuth(req).userId, param(req, 'id'))
+  res.status(204).end()
+})
+
 ordersRouter.post('/orders/:id/review', requireAuth, async (req, res) => {
   const input = parse(reviewInputSchema, req.body)
   res.status(201).json(await reviewService.create(getAuth(req).userId, param(req, 'id'), input))

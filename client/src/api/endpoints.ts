@@ -101,6 +101,7 @@ export interface ReviewInput {
 export const orderApi = {
   checkout: (listingIds: string[]) => post<Purchase[]>('/orders', { listingIds }),
   confirmPayment: (orderId: string) => post<Purchase>(`/orders/${orderId}/confirm-payment`),
+  skipReview: (orderId: string) => post<void>(`/orders/${orderId}/skip-review`),
   cancel: (orderId: string) => post<Purchase>(`/orders/${orderId}/cancel`),
   purchases: () => api<Purchase[]>('/me/purchases'),
   salesSummary: () => api<SalesSummary>('/me/sales/summary'),

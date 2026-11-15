@@ -51,7 +51,16 @@ export async function seedDemoData() {
   }
   const demoUserIds = demoUsers.map((user) => user.id)
   if (realOwner) {
-    await prisma.listing.updateMany({ where: { ownerId: { in: demoUserIds } }, data: { ownerId: realOwner.id } })
+    const fromDemo = { sellerId: { in: demoUserIds } }
+    const toOwner = { sellerId: realOwner.id }
+    await prisma.$transaction([
+      prisma.listing.updateMany({ where: { ownerId: { in: demoUserIds } }, data: { ownerId: realOwner.id } }),
+      // Their sales, reviews and listing chats move too, so the history stays in one place.
+      // Purchases the owner made from a demo user are left alone: nobody sells to themselves.
+      prisma.order.updateMany({ where: { ...fromDemo, buyerId: { not: realOwner.id } }, data: toOwner }),
+      prisma.review.updateMany({ where: { ...fromDemo, authorId: { not: realOwner.id } }, data: toOwner }),
+      prisma.conversation.updateMany({ where: { ...fromDemo, buyerId: { not: realOwner.id } }, data: toOwner }),
+    ])
   }
   const knownOwners = realOwner ? [...demoUserIds, realOwner.id] : demoUserIds
 

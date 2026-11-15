@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { listingApi } from '../api/endpoints'
 import { useAuth } from '../app/auth'
+import { CURRENCIES, setDisplayCurrency, usePrices } from '../app/currency'
 import { useDocumentTitle, useRequireLogin, useSavedListings } from '../app/hooks'
 import { keys } from '../app/queryClient'
 import { HomeAddressPrompt } from '../components/HomeAddress'
@@ -19,7 +20,6 @@ const SORTS = [
   ['oldest', 'Oldest first'],
 ] as const
 
-const CURRENCIES = ['CHF', 'EUR', 'USD', 'UAH']
 const RADII = [1, 2, 5, 10, 20]
 
 /**
@@ -122,7 +122,6 @@ export function Catalog() {
     category: params.get('category') ?? '',
     minPrice: params.get('minPrice') ?? '',
     maxPrice: params.get('maxPrice') ?? '',
-    currency: params.get('currency') ?? '',
     radius: params.get('radius') ?? '',
     sort: params.get('sort') ?? 'newest',
     page: Math.max(1, Number(params.get('page')) || 1),
@@ -151,7 +150,8 @@ export function Catalog() {
     placeholderData: keepPreviousData,
   })
   const saved = useSavedListings()
-  const hasFilters = Boolean(filters.q || filters.category || filters.minPrice || filters.maxPrice || filters.currency || filters.radius)
+  const prices = usePrices()
+  const hasFilters = Boolean(filters.q || filters.category || filters.minPrice || filters.maxPrice || filters.radius)
 
   return (
     <>
@@ -189,14 +189,16 @@ export function Catalog() {
           max={filters.maxPrice}
           onApply={(minPrice, maxPrice) => update({ minPrice, maxPrice })}
         />
-        <select
-          aria-label={t('Currency')}
-          value={filters.currency}
-          onChange={(event) => update({ currency: event.target.value })}
+<select
+          aria-label={t('Show prices in')}
+          value={prices.target}
+          onChange={(event) => setDisplayCurrency(event.target.value)}
         >
-          <option value="">{t('Any currency')}</option>
+          <option value="">{t('Prices as listed')}</option>
           {CURRENCIES.map((currency) => (
-            <option key={currency}>{currency}</option>
+            <option key={currency} value={currency}>
+              {t('Prices in {currency}', { currency })}
+            </option>
           ))}
         </select>
         <div className="toolbar-end">
@@ -240,6 +242,15 @@ export function Catalog() {
             favoriteIds={saved.favoriteIds}
             onToggleFavorite={saved.toggleFavorite}
           />
+          {prices.converting && (
+            <p className="muted rates-note">
+              {t('Converted prices are approximate.')}{' '}
+              {/* The provider of the free rates asks for this link. */}
+              <a className="link" href="https://www.exchangerate-api.com" target="_blank" rel="noreferrer">
+                Rates By Exchange Rate API
+              </a>
+            </p>
+          )}
           <Pagination
             page={results.data.page}
             totalPages={results.data.totalPages}

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { userApi } from '../api/endpoints'
 import type { Review, VoteType } from '../api/types'
@@ -118,6 +118,9 @@ function ReviewCard({ review, sellerId }: { review: Review; sellerId: string }) 
 export function UserProfile() {
   const { id = '' } = useParams()
   const [tab, setTab] = useState<'listings' | 'reviews'>('listings')
+  // Set by clicking a category in the statistics: narrows the listings below.
+  const [category, setCategory] = useState<string | null>(null)
+  const listingsTop = useRef<HTMLDivElement>(null)
   const profile = useQuery({ queryKey: ['users', id], queryFn: () => userApi.profile(id) })
   const listings = useQuery({ queryKey: ['users', id, 'listings'], queryFn: () => userApi.listings(id) })
   const reviews = useQuery({ queryKey: ['users', id, 'reviews'], queryFn: () => userApi.reviews(id) })
@@ -170,9 +173,16 @@ export function UserProfile() {
             </dl>
           </header>
 
-          <ProfileCharts userId={id} />
+          <ProfileCharts
+            userId={id}
+            onListingCategory={(name) => {
+              setCategory(name)
+              setTab('listings')
+              listingsTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }}
+          />
 
-          <div className="tabs" role="tablist">
+          <div className="tabs" role="tablist" ref={listingsTop}>
             <button type="button" role="tab" aria-selected={tab === 'listings'} onClick={() => setTab('listings')}>
               {t('Listings (')}{user.stats.activeListings})
             </button>
@@ -183,9 +193,26 @@ export function UserProfile() {
 
           {tab === 'listings' ? (
             <QueryView query={listings} empty={<EmptyState title={t('No active listings')} />}>
-              {(items) => (
-                <ListingGrid listings={items} favoriteIds={saved.favoriteIds} onToggleFavorite={saved.toggleFavorite} />
-              )}
+              {(items) => {
+                const shown = category ? items.filter((item) => item.category.name === category) : items
+                return (
+                  <>
+                    {category && (
+                      <p className="chips">
+                        <span className="chip active">{t(category)}</span>
+                        <button type="button" className="chip" onClick={() => setCategory(null)}>
+                          {t('Show all')}
+                        </button>
+                      </p>
+                    )}
+                    {shown.length === 0 ? (
+                      <EmptyState title={t('No active listings')} />
+                    ) : (
+                      <ListingGrid listings={shown} favoriteIds={saved.favoriteIds} onToggleFavorite={saved.toggleFavorite} />
+                    )}
+                  </>
+                )
+              }}
             </QueryView>
           ) : (
             <QueryView query={reviews} empty={<EmptyState title={t('No reviews yet')} />}>

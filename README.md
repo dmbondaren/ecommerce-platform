@@ -10,8 +10,9 @@ It started as my bachelor's thesis (Express + Sequelize + MySQL, one 1 000-line 
 
 **Buying and selling**
 - Listings with up to ten photos, categories, price in CHF / EUR / USD / UAH
-- Search with filters (category, price, currency), sorting and pagination; the state lives in the URL, so a search can be shared
+- Search with filters (category, price), sorting and pagination; the state lives in the URL, so a search can be shared
 - “Near me”: listings within 1–20 km of the user's home address, which is optional and never shown to others
+- Prices can be shown in one currency of the visitor's choice, converted with daily exchange rates (cached on the server, with a fallback when the provider is unavailable)
 - Favourites, cart, browsing history, notifications when a saved item gets cheaper
 - Public profiles with statistics: sales and purchases over time, and category breakdowns
 - Interface in English, German, Ukrainian and Russian, switchable in the header
@@ -20,7 +21,8 @@ It started as my bachelor's thesis (Express + Sequelize + MySQL, one 1 000-line 
 - Optional map position per listing (Leaflet and OpenStreetMap), found from the address or placed by hand
 - Sales analytics for sellers: revenue, average sale and a six-month chart
 - A sold item can be offered again: the form opens pre-filled, to be checked and published as a new listing
-- Reviews tied to a real purchase, with votes and replies
+- Reviews tied to a real purchase, with votes and replies, and a reminder after a purchase that can be declined
+- Sellers can give the account buyers should pay to; it is shown only to a buyer who has reserved the item
 
 **Communication**
 - Real-time chat between buyer and seller (WebSocket), with photos, editing and deleting

@@ -11,14 +11,25 @@ import { ErrorBoundary } from './ErrorBoundary'
 import { Icon, type IconName } from './Icon'
 import { LanguageSwitch } from './LanguageSwitch'
 import { PaymentBanner } from './PaymentBanner'
+import { ReviewBanner } from './ReviewBanner'
 import { ThemeSwitch } from './ThemeSwitch'
 import { Avatar, Button } from './ui'
 import { t } from '../app/i18n'
 
-function HeaderLink({ to, icon, label, count = 0 }: { to: string; icon: IconName; label: string; count?: number }) {
+interface HeaderLinkProps {
+  to: string
+  icon: IconName
+  label: string
+  count?: number
+  /** Fills the icon in red, e.g. the heart once something is saved. */
+  highlight?: boolean
+}
+
+function HeaderLink({ to, icon, label, count = 0, highlight = false }: HeaderLinkProps) {
   return (
-    <NavLink to={to} className="header-link" aria-label={count ? `${label} (${count} new)` : label} title={label}>
-      <Icon name={icon} size={22} />
+    <NavLink to={to} className={highlight ? 'header-link highlighted' : 'header-link'} aria-label={count ? `${label} (${count} new)` : label} title={label}>
+      {/* The key restarts the little bounce every time the count changes. */}
+      <Icon key={count} name={icon} size={22} filled={highlight} className={highlight ? 'pop' : undefined} />
       {count > 0 && <span className="counter">{count > 99 ? '99+' : count}</span>}
     </NavLink>
   )
@@ -87,7 +98,7 @@ export function Layout() {
   const signedIn = Boolean(user)
   useRealtime()
 
-  const { cartCount } = useSavedListings()
+  const { cartCount, favoriteIds } = useSavedListings()
   const unread = useQuery({ queryKey: keys.unread, queryFn: chatApi.unreadCount, enabled: signedIn })
   const notifications = useQuery({ queryKey: keys.notifications, queryFn: accountApi.notifications, enabled: signedIn })
 
@@ -111,7 +122,13 @@ export function Layout() {
             {user ? (
               <>
                 {isStaff && <HeaderLink to="/admin" icon="shield" label={t('Administration')} />}
-                <HeaderLink to="/account/favorites" icon="heart" label={t('Favourites')} />
+                <HeaderLink
+                  to="/account/favorites"
+                  icon="heart"
+                  label={t('Favourites')}
+                  count={favoriteIds.size}
+                  highlight={favoriteIds.size > 0}
+                />
                 <HeaderLink to="/cart" icon="cart" label={t('Cart')} count={cartCount} />
                 <HeaderLink to="/messages" icon="chat" label={t('Messages')} count={unread.data?.count} />
                 <HeaderLink
@@ -139,6 +156,7 @@ export function Layout() {
         </div>
       </header>
       <PaymentBanner />
+      <ReviewBanner />
       {user && !user.isVerified && <VerifyBanner />}
       <main id="main" className="container main">
         <ErrorBoundary resetKey={location.pathname}>

@@ -686,4 +686,28 @@ export const de: Record<string, string> = {
     'Die Reservierung endet und der Artikel steht wieder allen zum Verkauf.',
   'Shown on your profile and listings to signed-in users.':
     'Wird angemeldeten Nutzern in Ihrem Profil und Ihren Inseraten angezeigt.',
+  'Review reminder':
+    'Erinnerung an die Bewertung',
+  'How was your purchase?':
+    'Wie war Ihr Kauf?',
+  'No review':
+    'Keine Bewertung',
+  'Show prices in':
+    'Preise anzeigen in',
+  'Prices as listed':
+    'Preise wie inseriert',
+  'Prices in {currency}':
+    'Preise in {currency}',
+  'Converted prices are approximate.':
+    'Umgerechnete Preise sind Näherungswerte.',
+  'Account for payments (optional)':
+    'Konto für Zahlungen (optional)',
+  'For example your IBAN. A buyer sees it only after reserving the item. It is remembered for your next listings.':
+    'Zum Beispiel Ihre IBAN. Käufer sehen sie erst nach der Reservierung. Sie wird für Ihre nächsten Inserate gemerkt.',
+  'Open the listing':
+    'Inserat öffnen',
+  'Bought':
+    'Gekauft',
+  'Show all':
+    'Alle anzeigen',
 }

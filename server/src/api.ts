@@ -5,6 +5,7 @@ import { conversationsRouter } from './modules/conversations/conversations.route
 import { listingsRouter } from './modules/listings/listings.routes'
 import { notificationsRouter } from './modules/notifications/notifications.routes'
 import { ordersRouter } from './modules/orders/orders.routes'
+import { rateService } from './modules/rates/rates.service'
 import { reportsRouter } from './modules/reports/reports.routes'
 import { reviewsRouter } from './modules/reviews/reviews.routes'
 import { uploadsRouter } from './modules/uploads/uploads.routes'
@@ -19,6 +20,10 @@ apiRouter.use('/conversations', conversationsRouter)
 apiRouter.use('/reviews', reviewsRouter)
 apiRouter.use('/uploads', uploadsRouter)
 apiRouter.use('/me/notifications', notificationsRouter)
+
+apiRouter.get('/rates', async (_req, res) => {
+  res.json(await rateService.current())
+})
 
 // These declare full paths and protect each route individually.
 apiRouter.use(usersRouter)

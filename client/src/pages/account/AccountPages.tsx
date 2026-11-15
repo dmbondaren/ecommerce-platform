@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { accountApi, listingApi, orderApi } from '../../api/endpoints'
 import type { Listing, Order, Purchase } from '../../api/types'
@@ -8,8 +8,10 @@ import { keys } from '../../app/queryClient'
 import { toast } from '../../app/toast'
 import { ConfirmDialog } from '../../components/dialogs'
 import { ListingGrid, ListingImage } from '../../components/ListingCard'
+import { awaitsReview } from '../../components/ReviewBanner'
+import { ReviewDialog } from '../../components/ReviewDialog'
 import { isAwaitingPayment, PaymentDetailsDialog, useNow, usePaymentActions } from '../../components/PaymentBanner'
-import { Button, EmptyState, Field, FormError, Modal, QueryView, Stars, UserLink, fieldErrors } from '../../components/ui'
+import { Button, EmptyState, QueryView, Stars, UserLink } from '../../components/ui'
 import {
   formatCountdown,
   formatDate,
@@ -153,54 +155,6 @@ export const History = () => (
   <SavedGrid title={t('Recently viewed')} queryKey={['me', 'history']} queryFn={listingApi.history} emptyTitle={t('Nothing viewed yet')} />
 )
 
-function ReviewDialog({ order, onClose }: { order: Order; onClose: () => void }) {
-  const client = useQueryClient()
-  const [rating, setRating] = useState(5)
-  const [comment, setComment] = useState('')
-  const [pros, setPros] = useState('')
-  const [cons, setCons] = useState('')
-  const review = useMutation({
-    mutationFn: () => orderApi.review(order.id, { rating, comment, pros, cons }),
-    meta: { silent: true },
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: keys.purchases })
-      toast.success(t('Thank you for your review'))
-      onClose()
-    },
-  })
-  const errors = fieldErrors(review.error)
-  const submit = (event: FormEvent) => {
-    event.preventDefault()
-    review.mutate()
-  }
-
-  return (
-    <Modal title={`Review: ${order.title}`} onClose={onClose}>
-      <form onSubmit={submit}>
-        <div className="modal-body">
-          <Stars value={rating} onChange={setRating} />
-          <Field label={t('How did it go? (optional)')} errors={errors.comment}>
-            {(props) => <textarea {...props} rows={4} maxLength={2000} value={comment} onChange={(event) => setComment(event.target.value)} />}
-          </Field>
-          <Field label={t('What you liked (optional)')} errors={errors.pros}>
-            {(props) => <input {...props} maxLength={500} value={pros} onChange={(event) => setPros(event.target.value)} />}
-          </Field>
-          <Field label={t('What could be better (optional)')} errors={errors.cons}>
-            {(props) => <input {...props} maxLength={500} value={cons} onChange={(event) => setCons(event.target.value)} />}
-          </Field>
-          {Object.keys(errors).length === 0 && <FormError error={review.error} />}
-        </div>
-        <footer className="modal-footer">
-          <Button onClick={onClose}>{t('Cancel')}</Button>
-          <Button type="submit" variant="primary" busy={review.isPending}>
-            {t('Publish review')}
-          </Button>
-        </footer>
-      </form>
-    </Modal>
-  )
-}
-
 function OrderRow({ order, children }: { order: Order; children: ReactNode }) {
   return (
     <li className="row-item">
@@ -224,6 +178,11 @@ export function Purchases() {
   const query = useQuery({ queryKey: keys.purchases, queryFn: orderApi.purchases })
   const now = useNow(query.data?.some((order) => order.status === 'PENDING_PAYMENT') ?? false)
   const { confirm, cancel } = usePaymentActions()
+  const client = useQueryClient()
+  const skip = useMutation({
+    mutationFn: orderApi.skipReview,
+    onSettled: () => client.invalidateQueries({ queryKey: keys.purchases }),
+  })
   const [reviewing, setReviewing] = useState<Purchase | null>(null)
   const [paying, setPaying] = useState<Purchase | null>(null)
 
@@ -267,13 +226,25 @@ export function Purchases() {
                 ) : order.status === 'PAID' ? (
                   order.review ? (
                     <Stars value={order.review.rating} />
+                  ) : awaitsReview(order) ? (
+                    <div className="row review-prompt">
+                      <Button size="sm" variant="primary" onClick={() => setReviewing(order)}>
+                        {t('Leave a review')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        busy={skip.isPending && skip.variables === order.id}
+                        onClick={() => skip.mutate(order.id)}
+                      >
+                        {t('No review')}
+                      </Button>
+                    </div>
                   ) : (
                     order.seller && (
-                      <div className="row">
-                        <Button size="sm" onClick={() => setReviewing(order)}>
-                          {t('Leave a review')}
-                        </Button>
-                      </div>
+                      <button type="button" className="link" onClick={() => setReviewing(order)}>
+                        {t('Leave a review')}
+                      </button>
                     )
                   )
                 ) : (

@@ -686,4 +686,28 @@ export const ru: Record<string, string> = {
     'Резерв завершится, и товар снова будет доступен всем.',
   'Shown on your profile and listings to signed-in users.':
     'Показывается вошедшим пользователям в вашем профиле и объявлениях.',
+  'Review reminder':
+    'Напоминание об отзыве',
+  'How was your purchase?':
+    'Как вам покупка?',
+  'No review':
+    'Без отзыва',
+  'Show prices in':
+    'Показывать цены в',
+  'Prices as listed':
+    'Цены как в объявлении',
+  'Prices in {currency}':
+    'Цены в {currency}',
+  'Converted prices are approximate.':
+    'Пересчитанные цены приблизительны.',
+  'Account for payments (optional)':
+    'Счёт для оплаты (необязательно)',
+  'For example your IBAN. A buyer sees it only after reserving the item. It is remembered for your next listings.':
+    'Например, ваш IBAN. Покупатель видит его только после резервирования товара. Он запомнится для следующих объявлений.',
+  'Open the listing':
+    'Открыть объявление',
+  'Bought':
+    'Куплено',
+  'Show all':
+    'Показать все',
 }

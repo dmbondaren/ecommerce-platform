@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { mainCurrency, topSlices } from './ProfileCharts'
 
-const deal = (currency: string) => ({ title: 'x', price: 1, currency, category: 'c', date: '2026-01-01' })
+const deal = (currency: string) => ({
+  id: 'o1',
+  listingId: null,
+  description: '',
+  imageUrls: [],
+  title: 'x',
+  price: 1,
+  currency,
+  category: 'c',
+  date: '2026-01-01',
+})
 
 describe('topSlices', () => {
   const counts = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((name, index) => ({ name, count: 8 - index }))
