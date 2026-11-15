@@ -13,7 +13,7 @@ import { summarizeSales } from './sales-summary'
 
 const PAYMENT_WINDOW_MS = env.PAYMENT_WINDOW_MINUTES * 60_000
 
-const orderInclude = {
+export const orderInclude = {
   buyer: { select: publicUserSelect },
   seller: { select: publicUserSelect },
   review: { select: { id: true, rating: true } },

@@ -668,4 +668,22 @@ export const ru: Record<string, string> = {
     'Категории покупок',
   '{count} items':
     '{count} шт.',
+  'Sell again':
+    'Продать снова',
+  'Copied from your earlier listing. Check the details and photos, then publish it as a new listing.':
+    'Скопировано из вашего прежнего объявления. Проверьте данные и фото и опубликуйте как новое объявление.',
+  'e-mail confirmed':
+    'e-mail подтверждён',
+  'View profile':
+    'Посмотреть профиль',
+  'Cancel purchase':
+    'Отменить покупку',
+  'Cancel this purchase?':
+    'Отменить эту покупку?',
+  'Yes, cancel it':
+    'Да, отменить',
+  'The reservation ends and the item goes back on sale for everyone.':
+    'Резерв завершится, и товар снова будет доступен всем.',
+  'Shown on your profile and listings to signed-in users.':
+    'Показывается вошедшим пользователям в вашем профиле и объявлениях.',
 }

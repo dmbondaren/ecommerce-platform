@@ -1,16 +1,17 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { Link, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
 import { errorMessage } from '../../api/client'
 import { adminApi, chatApi } from '../../api/endpoints'
-import type { AdminUser, Listing } from '../../api/types'
+import type { AdminOrder, AdminUser, Listing, PlatformStats } from '../../api/types'
 import { useAuth } from '../../app/auth'
 import { useDocumentTitle } from '../../app/hooks'
 import { toast } from '../../app/toast'
+import { BarList, TrendChart } from '../../components/charts'
 import { ConfirmDialog, ReasonDialog } from '../../components/dialogs'
 import { ListingImage } from '../../components/ListingCard'
-import { Button, EmptyState, Pagination, QueryView, UserLink } from '../../components/ui'
-import { formatDate, formatPrice, STATUS_LABELS, timeAgo } from '../../lib/format'
+import { Button, EmptyState, Modal, Pagination, QueryView, UserLink } from '../../components/ui'
+import { formatDate, formatPrice, formatTime, ORDER_STATUS_LABELS, STATUS_LABELS, timeAgo } from '../../lib/format'
 
 const adminKey = ['admin'] as const
 
@@ -364,6 +365,352 @@ function AuditLog() {
   )
 }
 
+function Tile({ label, value, note, to }: { label: string; value: string | number; note?: string; to?: string }) {
+  const body = (
+    <>
+      <span className="tile-label">{label}</span>
+      <strong className="tile-value">{value}</strong>
+      {note && <span className="muted">{note}</span>}
+    </>
+  )
+  // A tile that leads somewhere is a link, so the detail behind a number is one click away.
+  return to ? (
+    <Link className="card tile tile-link" to={to}>
+      {body}
+    </Link>
+  ) : (
+    <div className="card tile">{body}</div>
+  )
+}
+
+function RankTable({ title, rows, currency }: { title: string; rows: PlatformStats['topSellers']; currency: string }) {
+  return (
+    <section className="card stat-card">
+      <header>
+        <h3>{title}</h3>
+      </header>
+      {rows.length === 0 ? (
+        <p className="muted">Nothing yet</p>
+      ) : (
+        <ol className="rank-list">
+          {rows.map((row, index) => (
+            <li key={row.user?.id ?? index}>
+              <span className="rank">{index + 1}</span>
+              <UserLink user={row.user} />
+              <span className="muted">
+                {row.count} {row.count === 1 ? 'deal' : 'deals'}
+              </span>
+              <strong>{formatPrice(row.revenue, currency)}</strong>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  )
+}
+
+/** The whole marketplace at a glance; every block links to the list behind it. */
+function Statistics() {
+  const query = useQuery({ queryKey: [...adminKey, 'stats'], queryFn: adminApi.stats })
+  return (
+    <QueryView query={query}>
+      {(stats) => {
+        const currency = stats.mainCurrency ?? 'CHF'
+        const paid = stats.totals.orders.PAID ?? 0
+        const sum = (key: 'orders' | 'users' | 'listings') => stats.daily.reduce((total, day) => total + day[key], 0)
+        const trend = (key: 'orders' | 'revenue' | 'users' | 'listings') =>
+          stats.daily.map((day) => ({ date: day.date, value: day[key] }))
+        return (
+          <>
+            <div className="tiles">
+              <Tile label="Users" value={stats.totals.users} note={`${stats.totals.bannedUsers} suspended`} to="/admin/users" />
+              <Tile
+                label="Active listings"
+                value={stats.totals.listings.ACTIVE ?? 0}
+                note={`${stats.totals.listings.RESERVED ?? 0} reserved · ${stats.totals.listings.SOLD ?? 0} sold`}
+                to="/"
+              />
+              <Tile
+                label="Completed sales"
+                value={paid}
+                note={`${stats.totals.orders.PENDING_PAYMENT ?? 0} awaiting payment`}
+                to="/admin/orders?status=PAID"
+              />
+              {stats.revenue.map((entry) => (
+                <Tile
+                  key={entry.currency}
+                  label={`Turnover, ${entry.currency}`}
+                  value={formatPrice(entry.amount, entry.currency)}
+                  note={`${entry.count} ${entry.count === 1 ? 'sale' : 'sales'}`}
+                />
+              ))}
+              <Tile label="Open reports" value={stats.totals.openReports} to="/admin/reports" />
+            </div>
+
+            <h2>Last 30 days</h2>
+            <div className="stat-grid">
+              <section className="card stat-card">
+                <header>
+                  <h3>Sales per day</h3>
+                  <span className="badge">{sum('orders')}</span>
+                </header>
+                <TrendChart points={trend('orders')} />
+              </section>
+              <section className="card stat-card">
+                <header>
+                  <h3>Turnover per day, {currency}</h3>
+                </header>
+                <TrendChart points={trend('revenue')} format={(value) => formatPrice(value, currency)} />
+              </section>
+              <section className="card stat-card">
+                <header>
+                  <h3>New listings per day</h3>
+                  <span className="badge">{sum('listings')}</span>
+                </header>
+                <TrendChart points={trend('listings')} />
+              </section>
+              <section className="card stat-card">
+                <header>
+                  <h3>New users per day</h3>
+                  <span className="badge">{sum('users')}</span>
+                </header>
+                <TrendChart points={trend('users')} />
+              </section>
+            </div>
+
+            <h2>What sells</h2>
+            <div className="stat-grid">
+              <section className="card stat-card">
+                <header>
+                  <h3>Sales by category</h3>
+                </header>
+                {stats.categories.length === 0 ? (
+                  <p className="muted">Nothing yet</p>
+                ) : (
+                  <BarList
+                    rows={stats.categories.map((category) => ({
+                      label: category.name,
+                      value: category.count,
+                      note: formatPrice(category.revenue, currency),
+                    }))}
+                  />
+                )}
+              </section>
+              <RankTable title="Top sellers" rows={stats.topSellers} currency={currency} />
+              <RankTable title="Top buyers" rows={stats.topBuyers} currency={currency} />
+            </div>
+            <p className="muted">
+              Amounts in the charts and rankings are in {currency}, the currency with the most sales; other currencies
+              are listed separately above. Every single sale, with buyer, seller and the listing as it was sold, is under{' '}
+              <Link className="link" to="/admin/orders">
+                Orders
+              </Link>
+              .
+            </p>
+          </>
+        )
+      }}
+    </QueryView>
+  )
+}
+
+function OrderDetails({ order, onClose }: { order: AdminOrder; onClose: () => void }) {
+  return (
+    <Modal title={order.title} onClose={onClose}>
+      <div className="modal-body">
+        {order.imageUrls.length > 0 && (
+          <div className="order-photos">
+            {order.imageUrls.map((url) => (
+              <a key={url} href={url} target="_blank" rel="noreferrer">
+                <img src={url} alt="" loading="lazy" />
+              </a>
+            ))}
+          </div>
+        )}
+        <dl className="definition">
+          <div>
+            <dt>Price</dt>
+            <dd>{formatPrice(order.price, order.currency)}</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd>
+              <span className={`badge order-${order.status.toLowerCase()}`}>{ORDER_STATUS_LABELS[order.status]}</span>
+            </dd>
+          </div>
+          <div>
+            <dt>Category</dt>
+            <dd>{order.category}</dd>
+          </div>
+          <div>
+            <dt>Seller</dt>
+            <dd>
+              <UserLink user={order.seller} />
+            </dd>
+          </div>
+          <div>
+            <dt>Buyer</dt>
+            <dd>
+              <UserLink user={order.buyer} />
+            </dd>
+          </div>
+          <div>
+            <dt>Ordered</dt>
+            <dd>
+              {formatDate(order.createdAt)}, {formatTime(order.createdAt)}
+            </dd>
+          </div>
+          {order.paidAt && (
+            <div>
+              <dt>Paid</dt>
+              <dd>
+                {formatDate(order.paidAt)}, {formatTime(order.paidAt)}
+              </dd>
+            </div>
+          )}
+          {order.paymentReference && (
+            <div>
+              <dt>Payment reference</dt>
+              <dd>{order.paymentReference}</dd>
+            </div>
+          )}
+          {order.review && (
+            <div>
+              <dt>Review</dt>
+              <dd>{order.review.rating} out of 5</dd>
+            </div>
+          )}
+          <div>
+            <dt>Description at the time of sale</dt>
+            <dd className="prose">{order.description}</dd>
+          </div>
+        </dl>
+      </div>
+      <footer className="modal-footer">
+        {order.listingId && (
+          <Link className="btn btn-secondary btn-md" to={`/listings/${order.listingId}`}>
+            Open the listing
+          </Link>
+        )}
+        <Button onClick={onClose}>Close</Button>
+      </footer>
+    </Modal>
+  )
+}
+
+const ORDER_FILTERS = [
+  ['', 'All'],
+  ['PAID', 'Paid'],
+  ['PENDING_PAYMENT', 'Awaiting payment'],
+  ['CANCELLED', 'Cancelled'],
+  ['EXPIRED', 'Expired'],
+] as const
+
+/** Archive of every order: the listing as it was sold, who bought it from whom, and when. */
+function Orders() {
+  const [params, setParams] = useSearchParams()
+  const status = params.get('status') ?? ''
+  const [search, setSearch] = useState({ draft: '', q: '', page: 1 })
+  const [selected, setSelected] = useState<AdminOrder | null>(null)
+  const query = useQuery({
+    queryKey: [...adminKey, 'orders', search.q, status, search.page],
+    queryFn: () => adminApi.orders(search.q, status, search.page),
+    placeholderData: keepPreviousData,
+  })
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    setSearch((current) => ({ ...current, q: current.draft.trim(), page: 1 }))
+  }
+
+  return (
+    <>
+      <form className="toolbar" role="search" onSubmit={submit}>
+        <input
+          type="search"
+          placeholder="Search by title, buyer, seller or payment reference"
+          aria-label="Search orders"
+          value={search.draft}
+          onChange={(event) => setSearch({ ...search, draft: event.target.value })}
+        />
+        <Button type="submit">Search</Button>
+      </form>
+      <div className="chips" role="group" aria-label="Order status">
+        {ORDER_FILTERS.map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            className={status === value ? 'chip active' : 'chip'}
+            aria-pressed={status === value}
+            onClick={() => {
+              setParams(value ? { status: value } : {})
+              setSearch((current) => ({ ...current, page: 1 }))
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <QueryView query={query}>
+        {(page) =>
+          page.items.length === 0 ? (
+            <EmptyState title="No orders match" />
+          ) : (
+            <>
+              <div className="table-wrap card">
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">Item</th>
+                      <th scope="col">Price</th>
+                      <th scope="col">Seller</th>
+                      <th scope="col">Buyer</th>
+                      <th scope="col">Date</th>
+                      <th scope="col">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {page.items.map((order) => (
+                      <tr key={order.id}>
+                        <td>
+                          <button type="button" className="row-button" onClick={() => setSelected(order)}>
+                            <span className="thumb thumb-sm">
+                              <ListingImage src={order.imageUrls[0]} alt="" />
+                            </span>
+                            <span>
+                              <strong>{order.title}</strong>
+                              <span className="muted">{order.category}</span>
+                            </span>
+                          </button>
+                        </td>
+                        <td>{formatPrice(order.price, order.currency)}</td>
+                        <td>
+                          <UserLink user={order.seller} />
+                        </td>
+                        <td>
+                          <UserLink user={order.buyer} />
+                        </td>
+                        <td>{formatDate(order.paidAt ?? order.createdAt)}</td>
+                        <td>
+                          <span className={`badge order-${order.status.toLowerCase()}`}>
+                            {ORDER_STATUS_LABELS[order.status]}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="muted">{page.total} orders in total. Click an item to see it as it was sold.</p>
+              <Pagination page={page.page} totalPages={page.totalPages} onChange={(next) => setSearch({ ...search, page: next })} />
+            </>
+          )
+        }
+      </QueryView>
+      {selected && <OrderDetails order={selected} onClose={() => setSelected(null)} />}
+    </>
+  )
+}
+
 const TRANSPORT_LABELS = {
   brevo: 'Brevo (HTTPS API)',
   smtp: 'SMTP server',
@@ -433,8 +780,10 @@ export default function Admin() {
       <h1>Administration</h1>
       <nav className="tabs" aria-label="Administration sections">
         <NavLink to="/admin" end>
-          Moderation
+          Statistics
         </NavLink>
+        <NavLink to="/admin/orders">Orders</NavLink>
+        <NavLink to="/admin/moderation">Moderation</NavLink>
         <NavLink to="/admin/reports">Reports</NavLink>
         <NavLink to="/admin/users">Users</NavLink>
         <NavLink to="/admin/audit">Audit log</NavLink>
@@ -442,7 +791,9 @@ export default function Admin() {
       </nav>
       <div className="stack">
         <Routes>
-          <Route index element={<Moderation />} />
+          <Route index element={<Statistics />} />
+          <Route path="orders" element={<Orders />} />
+          <Route path="moderation" element={<Moderation />} />
           <Route path="reports" element={<Reports />} />
           <Route path="users" element={<Users />} />
           <Route path="audit" element={<AuditLog />} />

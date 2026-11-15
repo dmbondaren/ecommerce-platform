@@ -54,7 +54,6 @@ export function MyListings() {
   const query = useQuery({ queryKey: [...keys.listings, 'mine'], queryFn: listingApi.mine })
   const [deleting, setDeleting] = useState<Listing | null>(null)
   const refresh = () => client.invalidateQueries({ queryKey: keys.listings })
-  const relist = useMutation({ mutationFn: listingApi.relist, onSuccess: refresh })
 
   return (
     <>
@@ -91,9 +90,9 @@ export function MyListings() {
                   {item.status === 'RESERVED' ? (
                     <span className="muted">{t('Awaiting payment')}</span>
                   ) : item.status === 'SOLD' ? (
-                    <Button size="sm" busy={relist.isPending && relist.variables === item.id} onClick={() => relist.mutate(item.id)}>
-                      {t('List again')}
-                    </Button>
+<Link className="btn btn-secondary btn-sm" to={`/sell?from=${item.id}`}>
+                      {t('Sell again')}
+                    </Link>
                   ) : (
                     <Link className="btn btn-secondary btn-sm" to={`/listings/${item.id}/edit`}>
                       {t('Edit')}

@@ -189,7 +189,13 @@ function Thread({ id, viewerId }: { id: string; viewerId: string }) {
           <Icon name="left" />
         </Link>
         <div className="chat-header-main">
-          <strong>{info?.name ?? '…'}</strong>
+          {info?.user ? (
+            <Link to={`/users/${info.user.id}`} title={t('View profile')}>
+              <strong>{info.name}</strong>
+            </Link>
+          ) : (
+            <strong>{info?.name ?? '…'}</strong>
+          )}
           {conversation.data?.listing ? (
             <Link className="muted" to={`/listings/${conversation.data.listing.id}`}>
               {conversation.data.listing.title}

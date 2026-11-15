@@ -668,4 +668,22 @@ export const de: Record<string, string> = {
     'Käufe nach Kategorie',
   '{count} items':
     '{count} Artikel',
+  'Sell again':
+    'Erneut verkaufen',
+  'Copied from your earlier listing. Check the details and photos, then publish it as a new listing.':
+    'Aus Ihrem früheren Inserat übernommen. Prüfen Sie Angaben und Fotos und veröffentlichen Sie es als neues Inserat.',
+  'e-mail confirmed':
+    'E-Mail bestätigt',
+  'View profile':
+    'Profil ansehen',
+  'Cancel purchase':
+    'Kauf abbrechen',
+  'Cancel this purchase?':
+    'Diesen Kauf abbrechen?',
+  'Yes, cancel it':
+    'Ja, abbrechen',
+  'The reservation ends and the item goes back on sale for everyone.':
+    'Die Reservierung endet und der Artikel steht wieder allen zum Verkauf.',
+  'Shown on your profile and listings to signed-in users.':
+    'Wird angemeldeten Nutzern in Ihrem Profil und Ihren Inseraten angezeigt.',
 }

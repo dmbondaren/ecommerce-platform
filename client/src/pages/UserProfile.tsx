@@ -137,8 +137,22 @@ export function UserProfile() {
               </h1>
               <p className="muted">
                 {t('Member since')} {formatDate(user.memberSince)}
-                {user.isVerified && ' · e-mail confirmed'}
+                {user.isVerified && ` · ${t('e-mail confirmed')}`}
               </p>
+              {(user.area || user.phone) && (
+                <p className="meta">
+                  {user.area && (
+                    <span>
+                      <Icon name="pin" size={16} /> {user.area}
+                    </span>
+                  )}
+                  {user.phone && (
+                    <a className="link" href={`tel:${user.phone}`}>
+                      {user.phone}
+                    </a>
+                  )}
+                </p>
+              )}
             </div>
             <dl className="stats">
               <div>

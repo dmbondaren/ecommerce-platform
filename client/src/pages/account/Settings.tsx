@@ -93,7 +93,11 @@ export function Settings() {
               <input {...props} required minLength={3} maxLength={24} value={nickname} onChange={(event) => setNickname(event.target.value)} />
             )}
           </Field>
-          <Field label={t('Phone (optional)')} errors={errors.phone}>
+          <Field
+            label={t('Phone (optional)')}
+            errors={errors.phone}
+            hint={t('Shown on your profile and listings to signed-in users.')}
+          >
             {(props) => <input {...props} type="tel" maxLength={40} value={phone} onChange={(event) => setPhone(event.target.value)} />}
           </Field>
           <Field label={t('Preferred currency')} errors={errors.preferredCurrency}>

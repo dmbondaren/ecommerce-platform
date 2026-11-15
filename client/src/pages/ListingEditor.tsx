@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { listingApi } from '../api/endpoints'
 import type { Coordinates, Currency, Listing, ListingInput } from '../api/types'
 import { useAuth } from '../app/auth'
@@ -9,7 +9,7 @@ import { keys } from '../app/queryClient'
 import { toast } from '../app/toast'
 import { ImagePicker } from '../components/ImagePicker'
 import { LocationPicker } from '../components/LocationPicker'
-import { Button, EmptyState, Field, FormError, PageHeader, QueryView, fieldErrors } from '../components/ui'
+import { Button, EmptyState, Field, FormError, PageHeader, QueryView, Spinner, fieldErrors } from '../components/ui'
 import { t } from '../app/i18n'
 
 const CURRENCIES: Currency[] = ['CHF', 'EUR', 'USD', 'UAH']
@@ -26,21 +26,26 @@ interface FormState {
   coordinates: Coordinates | null
 }
 
-function EditorForm({ listing }: { listing?: Listing }) {
+/**
+ * `listing` is edited in place. `template` only fills in the form: saving
+ * creates a new listing, which is how a sold item is offered again.
+ */
+function EditorForm({ listing, template }: { listing?: Listing; template?: Listing }) {
+  const source = listing ?? template
   const { user } = useAuth()
   const navigate = useNavigate()
   const client = useQueryClient()
   const categories = useQuery({ queryKey: keys.categories, queryFn: listingApi.categories, staleTime: Infinity })
   const [form, setForm] = useState<FormState>({
-    title: listing?.title ?? '',
-    description: listing?.description ?? '',
-    price: listing ? String(listing.price) : '',
-    currency: listing?.currency ?? user?.preferredCurrency ?? 'CHF',
-    categoryId: listing ? String(listing.category.id) : '',
-    location: listing?.location ?? '',
-    phone: listing?.phone ?? user?.phone ?? '',
-    imageUrls: listing?.imageUrls ?? [],
-    coordinates: listing?.coordinates ?? null,
+    title: source?.title ?? '',
+    description: source?.description ?? '',
+    price: source ? String(source.price) : '',
+    currency: source?.currency ?? user?.preferredCurrency ?? 'CHF',
+    categoryId: source ? String(source.category.id) : '',
+    location: source?.location ?? '',
+    phone: source?.phone ?? user?.phone ?? '',
+    imageUrls: source?.imageUrls ?? [],
+    coordinates: source?.coordinates ?? null,
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<unknown>(null)
@@ -179,9 +184,18 @@ function EditorForm({ listing }: { listing?: Listing }) {
 
 export function ListingEditor() {
   const { id } = useParams()
+  const [params] = useSearchParams()
   const { user } = useAuth()
-  const existing = useQuery({ queryKey: keys.listing(id ?? ''), queryFn: () => listingApi.get(id ?? ''), enabled: Boolean(id) })
-  useDocumentTitle(id ? 'Edit listing' : 'Sell an item')
+  // "/sell?from=<id>" starts a new listing from one of the user's own, e.g. a sold one.
+  const templateId = id ? null : params.get('from')
+  const sourceId = id ?? templateId ?? ''
+  const existing = useQuery({
+    queryKey: keys.listing(sourceId),
+    queryFn: () => listingApi.get(sourceId),
+    enabled: Boolean(sourceId),
+  })
+  useDocumentTitle(id ? t('Edit listing') : t('Sell an item'))
+  const template = templateId && existing.data?.owner.id === user?.id ? existing.data : undefined
 
   if (!id) {
     return (
@@ -191,8 +205,17 @@ export function ListingEditor() {
           <EmptyState title={t('Confirm your e-mail address first')}>
             <p>{t('We sent you a link when you registered. Listings can be published once it is confirmed.')}</p>
           </EmptyState>
+        ) : templateId && existing.isPending ? (
+          <Spinner />
         ) : (
-          <EditorForm />
+          <>
+            {template && (
+              <p className="notice" role="status">
+                {t('Copied from your earlier listing. Check the details and photos, then publish it as a new listing.')}
+              </p>
+            )}
+            <EditorForm key={template?.id ?? 'new'} template={template} />
+          </>
         )}
       </div>
     )

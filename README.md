@@ -19,6 +19,7 @@ It started as my bachelor's thesis (Express + Sequelize + MySQL, one 1 000-line 
 - Simulated payment in the style of a peer-to-peer trade: transfer details by e-mail, a 15-minute countdown, an “I have paid” confirmation, and automatic release of unpaid reservations
 - Optional map position per listing (Leaflet and OpenStreetMap), found from the address or placed by hand
 - Sales analytics for sellers: revenue, average sale and a six-month chart
+- A sold item can be offered again: the form opens pre-filled, to be checked and published as a new listing
 - Reviews tied to a real purchase, with votes and replies
 
 **Communication**
@@ -31,6 +32,7 @@ It started as my bachelor's thesis (Express + Sequelize + MySQL, one 1 000-line 
 - Automatic screening of new and edited listings (prohibited items, off-platform payment requests, link spam); a flagged listing is published like any other and reported to the moderators
 - Reports, a moderation queue, temporary and permanent suspensions
 - An audit log of every moderation action
+- Platform statistics for staff: totals, 30-day trends, sales by category, top sellers and buyers, and an archive of every order with the listing exactly as it was sold
 
 ## Tech stack
 

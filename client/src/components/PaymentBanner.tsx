@@ -8,6 +8,7 @@ import { keys } from '../app/queryClient'
 import { toast } from '../app/toast'
 import { formatCountdown, formatPrice } from '../lib/format'
 import { Icon } from './Icon'
+import { ConfirmDialog } from './dialogs'
 import { Button, Modal } from './ui'
 import { t } from '../app/i18n'
 
@@ -101,6 +102,7 @@ export function PaymentBanner() {
   const now = useNow(hasPending)
   const { confirm } = usePaymentActions()
   const [showDetails, setShowDetails] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
 
   const pending = (purchases.data ?? [])
     .filter((order) => isAwaitingPayment(order, now))
@@ -144,12 +146,30 @@ export function PaymentBanner() {
           <Button size="sm" variant="primary" busy={confirm.isPending} onClick={() => confirm.mutate(order.id)}>
             {t('I have paid')}
           </Button>
+          <Button size="sm" variant="ghost" onClick={() => setCancelling(true)}>
+            {t('Cancel purchase')}
+          </Button>
         </div>
       </div>
       <div className="pay-progress" aria-hidden="true">
         <span style={{ width: `${Math.min(100, (left / total) * 100)}%` }} />
       </div>
       {showDetails && <PaymentDetailsDialog order={order} onClose={() => setShowDetails(false)} />}
+      {cancelling && (
+        <ConfirmDialog
+          title={t('Cancel this purchase?')}
+          confirmLabel={t('Yes, cancel it')}
+          danger
+          onClose={() => setCancelling(false)}
+          onConfirm={async () => {
+            await orderApi.cancel(order.id)
+            await client.invalidateQueries()
+            toast.info(t('Reservation cancelled. The item is on sale again.'))
+          }}
+        >
+          <p>{t('The reservation ends and the item goes back on sale for everyone.')}</p>
+        </ConfirmDialog>
+      )}
     </section>
   )
 }

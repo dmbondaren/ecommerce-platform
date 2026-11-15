@@ -4,7 +4,14 @@ import { pageSchema, param } from '../../lib/http'
 import { parse } from '../../lib/validation'
 import { getAuth, requireAdmin, requireAuth, requireSuperAdmin } from '../../middleware/auth'
 import { reportService } from '../reports/reports.service'
-import { adminService, banSchema, reasonSchema, roleSchema, userSearchSchema } from './admin.service'
+import {
+  adminService,
+  banSchema,
+  orderSearchSchema,
+  reasonSchema,
+  roleSchema,
+  userSearchSchema,
+} from './admin.service'
 
 const reportQuerySchema = z.object({ status: z.enum(['OPEN', 'RESOLVED']).default('OPEN') })
 
@@ -64,6 +71,14 @@ adminRouter.get('/reports', async (req, res) => {
 
 adminRouter.post('/reports/:id/resolve', async (req, res) => {
   res.json(await reportService.resolve(getAuth(req).userId, param(req, 'id')))
+})
+
+adminRouter.get('/stats', async (_req, res) => {
+  res.json(await adminService.stats())
+})
+
+adminRouter.get('/orders', async (req, res) => {
+  res.json(await adminService.orders(parse(pageSchema.merge(orderSearchSchema), req.query)))
 })
 
 adminRouter.get('/system', (_req, res) => {

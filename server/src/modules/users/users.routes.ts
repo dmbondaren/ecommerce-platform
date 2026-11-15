@@ -16,8 +16,8 @@ usersRouter.patch('/me', requireAuth, async (req, res) => {
   res.json(await userService.updateAccount(getAuth(req).userId, parse(accountPatchSchema, req.body)))
 })
 
-usersRouter.get('/users/:id', async (req, res) => {
-  res.json(await userService.publicProfile(param(req, 'id')))
+usersRouter.get('/users/:id', optionalAuth, async (req, res) => {
+  res.json(await userService.publicProfile(param(req, 'id'), req.auth !== undefined))
 })
 
 usersRouter.get('/users/:id/activity', async (req, res) => {

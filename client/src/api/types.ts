@@ -41,6 +41,10 @@ export interface AdminUserDetail extends AdminUser {
 }
 
 export interface Profile extends PublicUser {
+  /** Only sent to signed-in visitors. */
+  phone: string | null
+  /** Where most of the user's listings are. */
+  area: string | null
   stats: { rating: number | null; reviewCount: number; activeListings: number; sales: number }
 }
 
@@ -248,4 +252,30 @@ export interface ProfileActivity {
   listingCategories: CategoryCount[]
   saleCategories: CategoryCount[]
   purchaseCategories: CategoryCount[]
+}
+
+export interface AdminOrder extends Order {
+  paymentReference: string | null
+}
+
+interface RankedUser {
+  user: PublicUser | null
+  count: number
+  revenue: number
+}
+
+export interface PlatformStats {
+  totals: {
+    users: number
+    bannedUsers: number
+    openReports: number
+    listings: Partial<Record<ListingStatus, number>>
+    orders: Partial<Record<OrderStatus, number>>
+  }
+  mainCurrency: string | null
+  revenue: { currency: string; count: number; amount: number }[]
+  daily: { date: string; orders: number; revenue: number; users: number; listings: number }[]
+  categories: { name: string; count: number; revenue: number }[]
+  topSellers: RankedUser[]
+  topBuyers: RankedUser[]
 }

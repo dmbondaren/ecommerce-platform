@@ -11,7 +11,9 @@ import { listingInclude, toListing } from '../listings/listing.dto'
 import { listingService } from '../listings/listings.service'
 import { notificationService } from '../notifications/notifications.service'
 import { publicUserSelect, toAdminUser, toPublicUser } from '../users/user.dto'
+import { orderInclude, toOrder } from '../orders/orders.service'
 import { recordAudit } from './audit'
+import { buildPlatformStats } from './platform-stats'
 
 const reason = z.string().trim().min(3, 'Give a reason of at least 3 characters').max(500)
 
@@ -22,6 +24,13 @@ export const banSchema = z.object({
   days: z.coerce.number().int().min(1).max(3650).nullish(),
 })
 export const roleSchema = z.object({ role: z.enum(['USER', 'ADMIN']) })
+export const orderSearchSchema = z.object({
+  q: z.string().trim().max(100).optional(),
+  status: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.enum(['PENDING_PAYMENT', 'PAID', 'CANCELLED', 'EXPIRED']).optional(),
+  ),
+})
 export const userSearchSchema = z.object({ q: z.string().trim().max(100).optional() })
 
 async function findUser(id: string): Promise<User> {
@@ -215,6 +224,88 @@ export const adminService = {
       listing.ownerId,
       `Your listing "${listing.title}" was removed by a moderator: ${why}`,
     )
+  },
+
+  /**
+   * Every order ever placed, newest first. Orders keep a snapshot of the
+   * listing, so this is also the archive of what was sold, even when the
+   * listing or its owner no longer exists.
+   */
+  async orders(query: { q?: string; status?: 'PENDING_PAYMENT' | 'PAID' | 'CANCELLED' | 'EXPIRED'; page: number; pageSize: number }) {
+    const where: Prisma.OrderWhereInput = {}
+    if (query.status) where.status = query.status
+    if (query.q) {
+      where.OR = [
+        { titleSnapshot: { contains: query.q, mode: 'insensitive' } },
+        { buyer: { nickname: { contains: query.q, mode: 'insensitive' } } },
+        { seller: { nickname: { contains: query.q, mode: 'insensitive' } } },
+        { paymentReference: { contains: query.q, mode: 'insensitive' } },
+      ]
+    }
+    const [rows, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        include: orderInclude,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+      prisma.order.count({ where }),
+    ])
+    const items = rows.map((row) => ({ ...toOrder(row), paymentReference: row.paymentReference }))
+    return paginated(items, total, query.page, query.pageSize)
+  },
+
+  /** Figures for the statistics page: totals, the last 30 days, and rankings. */
+  async stats() {
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const [users, bannedUsers, listingGroups, orderGroups, paid, newUsers, newListings, openReports] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.count({ where: { OR: [{ bannedPermanently: true }, { bannedUntil: { gt: new Date() } }] } }),
+      prisma.listing.groupBy({ by: ['status'], _count: { _all: true } }),
+      prisma.order.groupBy({ by: ['status'], _count: { _all: true } }),
+      prisma.order.findMany({
+        where: { status: 'PAID' },
+        select: { price: true, currency: true, categorySnapshot: true, paidAt: true, createdAt: true, sellerId: true, buyerId: true },
+      }),
+      prisma.user.findMany({ where: { createdAt: { gte: since } }, select: { createdAt: true } }),
+      prisma.listing.findMany({ where: { createdAt: { gte: since } }, select: { createdAt: true } }),
+      prisma.report.count({ where: { status: 'OPEN' } }),
+    ])
+    const stats = buildPlatformStats({
+      paidOrders: paid.map((order) => ({
+        price: order.price.toNumber(),
+        currency: order.currency,
+        category: order.categorySnapshot,
+        paidAt: order.paidAt ?? order.createdAt,
+        sellerId: order.sellerId,
+        buyerId: order.buyerId,
+      })),
+      newUsers: newUsers.map((user) => user.createdAt),
+      newListings: newListings.map((listing) => listing.createdAt),
+    })
+
+    const ids = [...new Set([...stats.topSellers, ...stats.topBuyers].map((entry) => entry.key))]
+    const people = await prisma.user.findMany({ where: { id: { in: ids } }, select: publicUserSelect })
+    const personOf = new Map(people.map((person) => [person.id, toPublicUser(person)]))
+    const withUser = (entries: typeof stats.topSellers) =>
+      entries.map((entry) => ({ user: personOf.get(entry.key) ?? null, count: entry.count, revenue: entry.revenue }))
+
+    return {
+      totals: {
+        users,
+        bannedUsers,
+        openReports,
+        listings: Object.fromEntries(listingGroups.map((group) => [group.status, group._count._all])),
+        orders: Object.fromEntries(orderGroups.map((group) => [group.status, group._count._all])),
+      },
+      mainCurrency: stats.mainCurrency,
+      revenue: stats.revenue,
+      daily: stats.daily,
+      categories: stats.categories,
+      topSellers: withUser(stats.topSellers),
+      topBuyers: withUser(stats.topBuyers),
+    }
   },
 
   /** How this deployment is set up, without revealing any secret. */

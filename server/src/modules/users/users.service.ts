@@ -113,16 +113,26 @@ export const userService = {
     }
   },
 
-  async publicProfile(id: string) {
-    const user = await prisma.user.findUnique({ where: { id }, select: publicUserSelect })
+  /** `signedIn` visitors also get the phone number, as they do on the user's listings. */
+  async publicProfile(id: string, signedIn = false) {
+    const user = await prisma.user.findUnique({ where: { id }, select: { ...publicUserSelect, phone: true } })
     if (!user) throw notFound('User')
-    const [reviews, activeListings, sales] = await Promise.all([
+    const [reviews, activeListings, sales, places] = await Promise.all([
       prisma.review.aggregate({ where: { sellerId: id }, _avg: { rating: true }, _count: { _all: true } }),
       prisma.listing.count({ where: { ownerId: id, status: { in: ['ACTIVE', 'RESERVED'] } } }),
       prisma.order.count({ where: { sellerId: id, status: 'PAID' } }),
+      prisma.listing.findMany({
+        where: { ownerId: id, status: { in: ['ACTIVE', 'RESERVED', 'SOLD'] }, location: { not: null } },
+        select: { location: true },
+        take: 200,
+      }),
     ])
+    // The home address is private; the area shown is where the user's listings are.
+    const area = countByName(places.flatMap((place) => (place.location ? [place.location] : [])))[0]?.name ?? null
     return {
       ...toPublicUser(user),
+      phone: signedIn ? user.phone : null,
+      area,
       stats: {
         rating: reviews._avg.rating,
         reviewCount: reviews._count._all,

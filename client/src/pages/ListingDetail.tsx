@@ -60,13 +60,6 @@ function Actions({ listing }: { listing: Listing }) {
     mutationFn: () => chatApi.openForListing(listing.id),
     onSuccess: (conversation) => navigate(`/messages/${conversation.id}`),
   })
-  const relist = useMutation({
-    mutationFn: () => listingApi.relist(listing.id),
-    onSuccess: () => {
-      toast.success(t('Your listing is active again'))
-      return refresh()
-    },
-  })
   const restore = useMutation({
     mutationFn: () => adminApi.activateListing(listing.id),
     onSuccess: () => {
@@ -86,9 +79,9 @@ function Actions({ listing }: { listing: Listing }) {
             </Link>
           )}
           {listing.status === 'SOLD' && (
-            <Button variant="primary" busy={relist.isPending} onClick={() => relist.mutate()}>
-              {t('List again')}
-            </Button>
+<Link className="btn btn-primary btn-md" to={`/sell?from=${listing.id}`}>
+              {t('Sell again')}
+            </Link>
           )}
           {listing.status !== 'RESERVED' && (
             <Button variant="danger" icon="trash" onClick={() => setDialog('delete')}>
@@ -220,7 +213,7 @@ function Actions({ listing }: { listing: Listing }) {
           onSubmit={async (reason) => {
             await adminApi.removeListing(listing.id, reason)
             await refresh()
-            navigate('/admin')
+            navigate('/admin/moderation')
           }}
         />
       )}

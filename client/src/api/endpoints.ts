@@ -1,6 +1,7 @@
 import { api } from './client'
 import type {
   Account,
+  AdminOrder,
   AdminUser,
   AdminUserDetail,
   AuditEntry,
@@ -15,6 +16,7 @@ import type {
   Notification,
   Order,
   Page,
+  PlatformStats,
   Profile,
   ProfileActivity,
   Purchase,
@@ -78,7 +80,6 @@ export const listingApi = {
   create: (input: ListingInput) => post<Listing>('/listings', input),
   update: (id: string, input: ListingInput) => api<Listing>(`/listings/${id}`, { method: 'PUT', body: input }),
   remove: (id: string) => api<void>(`/listings/${id}`, { method: 'DELETE' }),
-  relist: (id: string) => post<Listing>(`/listings/${id}/relist`),
   recordView: (id: string) => post<void>(`/listings/${id}/view`),
   report: (id: string, message: string, attachmentUrls: string[]) =>
     post<Report>(`/listings/${id}/reports`, { message, attachmentUrls }),
@@ -161,6 +162,9 @@ export const adminApi = {
   removeListing: (id: string, reason: string) => post<void>(`/admin/listings/${id}/remove`, { reason }),
   reports: (status: 'OPEN' | 'RESOLVED') => api<Report[]>('/admin/reports', { query: { status } }),
   resolveReport: (id: string) => post<Report>(`/admin/reports/${id}/resolve`),
+  stats: () => api<PlatformStats>('/admin/stats'),
+  orders: (q: string, status: string, page: number) =>
+    api<Page<AdminOrder>>('/admin/orders', { query: { q, status, page } }),
   system: () =>
     api<{
       mail: {

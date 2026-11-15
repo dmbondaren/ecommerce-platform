@@ -668,4 +668,22 @@ export const uk: Record<string, string> = {
     'Категорії покупок',
   '{count} items':
     '{count} шт.',
+  'Sell again':
+    'Продати знову',
+  'Copied from your earlier listing. Check the details and photos, then publish it as a new listing.':
+    'Скопійовано з вашого попереднього оголошення. Перевірте дані та фото й опублікуйте як нове оголошення.',
+  'e-mail confirmed':
+    'e-mail підтверджено',
+  'View profile':
+    'Переглянути профіль',
+  'Cancel purchase':
+    'Скасувати покупку',
+  'Cancel this purchase?':
+    'Скасувати цю покупку?',
+  'Yes, cancel it':
+    'Так, скасувати',
+  'The reservation ends and the item goes back on sale for everyone.':
+    'Резерв завершиться, і товар знову буде доступний усім.',
+  'Shown on your profile and listings to signed-in users.':
+    'Показується зареєстрованим користувачам у вашому профілі та оголошеннях.',
 }

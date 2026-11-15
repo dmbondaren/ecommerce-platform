@@ -2288,3 +2288,161 @@ tbody tr {
   height: 10px;
   border-radius: 3px;
 }
+
+/* ---------- Admin statistics ---------- */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  font-size: 0.85rem;
+}
+
+.tile-label {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.tile-value {
+  font-size: 1.7rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.tile-link {
+  transition:
+    transform 0.15s,
+    border-color 0.15s;
+}
+
+.tile-link:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  color: inherit;
+}
+
+.trend svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chart-area {
+  fill: color-mix(in srgb, var(--series-1) 14%, transparent);
+}
+
+/* The dot of the hovered day grows; the hit area spans the full height. */
+.chart-column:hover .chart-dot {
+  r: 5.5;
+}
+
+.bar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+.bar-list li {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) minmax(60px, 2fr) auto auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.bar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-track {
+  height: 10px;
+  background: var(--surface-2);
+  border-radius: 999px;
+}
+
+.bar-fill {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  background: var(--series-1);
+  border-radius: 999px;
+}
+
+.rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.rank-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rank-list strong {
+  margin-left: auto;
+}
+
+.rank {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  background: var(--surface-2);
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.row-button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row-button > span:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.row-button:hover strong {
+  color: var(--accent);
+}
+
+.thumb-sm {
+  width: 44px;
+  height: 44px;
+}
+
+.order-photos {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.order-photos img {
+  width: 110px;
+  height: 110px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
