@@ -228,3 +228,24 @@ export type ServerEvent =
   | { type: 'order.updated'; orderId: string; status: string }
   | { type: 'notification.created'; notification: Notification }
   | { type: 'account.suspended' }
+
+export interface Deal {
+  title: string
+  price: number
+  currency: string
+  category: string
+  date: string
+}
+
+export interface CategoryCount {
+  name: string
+  count: number
+}
+
+export interface ProfileActivity {
+  sales: Deal[]
+  purchases: Deal[]
+  listingCategories: CategoryCount[]
+  saleCategories: CategoryCount[]
+  purchaseCategories: CategoryCount[]
+}

@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { t } from '../app/i18n'
 
 interface Props {
   children: ReactNode
@@ -33,14 +34,14 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.error) return this.props.children
     return (
       <div className="state" role="alert">
-        <h2>Something went wrong on this page</h2>
-        <p className="muted">The problem has been logged. You can try again or go back to the start page.</p>
+        <h2>{t('Something went wrong on this page')}</h2>
+        <p className="muted">{t('The problem has been logged. You can try again or go back to the start page.')}</p>
         <div className="row">
           <button type="button" className="btn btn-primary btn-md" onClick={() => this.setState({ error: null })}>
-            Try again
+            {t('Try again')}
           </button>
           <a className="btn btn-secondary btn-md" href="/">
-            Go to start page
+            {t('Go to start page')}
           </a>
         </div>
       </div>

@@ -7,6 +7,7 @@ import { useAuth } from '../../app/auth'
 import { toast } from '../../app/toast'
 import { HomeAddressSettings } from '../../components/HomeAddress'
 import { Avatar, Button, Field, FormError, fieldErrors } from '../../components/ui'
+import { t } from '../../app/i18n'
 
 const CURRENCIES: Currency[] = ['CHF', 'EUR', 'USD', 'UAH']
 
@@ -28,7 +29,7 @@ export function Settings() {
     setError(null)
     try {
       setUser(await accountApi.update({ nickname: nickname.trim(), phone: phone.trim() || null, preferredCurrency: currency }))
-      toast.success('Profile saved')
+      toast.success(t('Profile saved'))
     } catch (err) {
       setError(err)
     } finally {
@@ -50,13 +51,13 @@ export function Settings() {
 
   return (
     <>
-      <h1>Profile</h1>
+      <h1>{t('Profile')}</h1>
       <div className="card form">
         <div className="row">
           <Avatar user={user} size={64} />
           <div>
             <Button size="sm" onClick={() => fileInput.current?.click()}>
-              Change photo
+              {t('Change photo')}
             </Button>
             {user.avatarUrl && (
               <Button
@@ -69,7 +70,7 @@ export function Settings() {
                     .catch((err: unknown) => toast.error(errorMessage(err)))
                 }
               >
-                Remove
+                {t('Remove')}
               </Button>
             )}
           </div>
@@ -84,18 +85,18 @@ export function Settings() {
 
         <form className="form" onSubmit={(event) => void save(event)}>
           {Object.keys(errors).length === 0 && <FormError error={error} />}
-          <Field label="E-mail" hint={user.isVerified ? 'Confirmed' : 'Not confirmed yet'}>
+          <Field label={t('E-mail')} hint={user.isVerified ? t('Confirmed') : t('Not confirmed yet')}>
             {(props) => <input {...props} value={user.email} readOnly />}
           </Field>
-          <Field label="Nickname" errors={errors.nickname} hint="3–24 letters, digits, dots, dashes or underscores. Shown on your listings.">
+          <Field label={t('Nickname')} errors={errors.nickname} hint={t('3–24 letters, digits, dots, dashes or underscores. Shown on your listings.')}>
             {(props) => (
               <input {...props} required minLength={3} maxLength={24} value={nickname} onChange={(event) => setNickname(event.target.value)} />
             )}
           </Field>
-          <Field label="Phone (optional)" errors={errors.phone}>
+          <Field label={t('Phone (optional)')} errors={errors.phone}>
             {(props) => <input {...props} type="tel" maxLength={40} value={phone} onChange={(event) => setPhone(event.target.value)} />}
           </Field>
-          <Field label="Preferred currency" errors={errors.preferredCurrency}>
+          <Field label={t('Preferred currency')} errors={errors.preferredCurrency}>
             {(props) => (
               <select {...props} value={currency} onChange={(event) => setCurrency(event.target.value as Currency)}>
                 {CURRENCIES.map((item) => (
@@ -106,7 +107,7 @@ export function Settings() {
           </Field>
           <div className="row">
             <Button type="submit" variant="primary" busy={busy}>
-              Save profile
+              {t('Save profile')}
             </Button>
           </div>
         </form>
@@ -115,15 +116,14 @@ export function Settings() {
       <HomeAddressSettings />
 
       <div className="card form">
-        <h2>Security</h2>
+        <h2>{t('Security')}</h2>
         <p className="muted">
-          To change your password, <Link to="/forgot-password">request a reset link</Link>. It signs you out on all
-          devices.
+          {t('To change your password,')} <Link to="/forgot-password">{t('request a reset link')}</Link>{t('. It signs you out on all devices.')}
         </p>
         <div className="row">
-          <Button onClick={() => void logout().then(() => navigate('/'))}>Sign out</Button>
+          <Button onClick={() => void logout().then(() => navigate('/'))}>{t('Sign out')}</Button>
           <Link className="btn btn-ghost btn-md" to={`/users/${user.id}`}>
-            View my public profile
+            {t('View my public profile')}
           </Link>
         </div>
       </div>

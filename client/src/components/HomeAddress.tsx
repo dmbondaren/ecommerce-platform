@@ -6,6 +6,7 @@ import { useAuth } from '../app/auth'
 import { toast } from '../app/toast'
 import { geocode, LazyMap, reverseGeocode } from './LocationPicker'
 import { Button, Field, FormError, Modal, Spinner } from './ui'
+import { t } from '../app/i18n'
 
 export interface HomeValue {
   address: string
@@ -26,7 +27,7 @@ export function HomeAddressFields({ value, onChange }: { value: HomeValue; onCha
 
   const find = async () => {
     if (!value.address.trim()) {
-      setMessage('Type your address first, e.g. “Bahnhofstrasse 1, Zürich”.')
+      setMessage(t('Type your address first, e.g. “Bahnhofstrasse 1, Zürich”.'))
       return
     }
     setBusy(true)
@@ -34,9 +35,9 @@ export function HomeAddressFields({ value, onChange }: { value: HomeValue; onCha
     try {
       const found = await geocode(value.address)
       if (found) onChange({ ...latest.current, coordinates: found })
-      else setMessage('This address was not found. Click on the map to mark the place yourself.')
+      else setMessage(t('This address was not found. Click on the map to mark the place yourself.'))
     } catch {
-      setMessage('The address search is not available right now. Click on the map to mark the place yourself.')
+      setMessage(t('The address search is not available right now. Click on the map to mark the place yourself.'))
     } finally {
       setBusy(false)
     }
@@ -54,14 +55,14 @@ export function HomeAddressFields({ value, onChange }: { value: HomeValue; onCha
 
   return (
     <>
-      <Field label="Home address" hint={message ?? 'Only you can see it. It is used to find listings near you.'}>
+      <Field label={t('Home address')} hint={message ?? t('Only you can see it. It is used to find listings near you.')}>
         {(props) => (
           <div className="input-row">
             <input
               {...props}
               maxLength={160}
               autoComplete="street-address"
-              placeholder="Street and number, town"
+              placeholder={t('Street and number, town')}
               value={value.address}
               onChange={(event) => onChange({ ...value, address: event.target.value })}
               onKeyDown={(event) => {
@@ -72,12 +73,12 @@ export function HomeAddressFields({ value, onChange }: { value: HomeValue; onCha
               }}
             />
             <Button busy={busy} onClick={() => void find()}>
-              Find
+              {t('Find')}
             </Button>
           </div>
         )}
       </Field>
-      <Suspense fallback={<Spinner label="Loading the map" />}>
+      <Suspense fallback={<Spinner label={t('Loading the map')} />}>
         <LazyMap position={value.coordinates} onChange={pick} />
       </Suspense>
     </>
@@ -119,7 +120,7 @@ export function HomeAddressPrompt({ onSaved, onClose }: { onSaved: () => void; o
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     if (!value.coordinates) {
-      setError(new Error('Press “Find” or click on the map so we know where the address is.'))
+      setError(new Error(t('Press “Find” or click on the map so we know where the address is.')))
       return
     }
     setBusy(true)
@@ -136,14 +137,14 @@ export function HomeAddressPrompt({ onSaved, onClose }: { onSaved: () => void; o
 
   if (confirmingSkip) {
     return (
-      <Modal title="Skip the address?" onClose={onClose}>
+      <Modal title={t('Skip the address?')} onClose={onClose}>
         <div className="modal-body">
-          <p>Without it we cannot show what is near you. You can add it any time under “My account”.</p>
+          <p>{t('Without it we cannot show what is near you. You can add it any time under “My account”.')}</p>
         </div>
         <footer className="modal-footer">
-          <Button onClick={() => setConfirmingSkip(false)}>Go back</Button>
+          <Button onClick={() => setConfirmingSkip(false)}>{t('Go back')}</Button>
           <Button variant="primary" onClick={onClose}>
-            Yes, skip
+            {t('Yes, skip')}
           </Button>
         </footer>
       </Modal>
@@ -151,21 +152,21 @@ export function HomeAddressPrompt({ onSaved, onClose }: { onSaved: () => void; o
   }
 
   return (
-    <Modal title={editing ? 'Search around another address' : 'Where is home?'} onClose={dismiss}>
+    <Modal title={editing ? t('Search around another address') : t('Where is home?')} onClose={dismiss}>
       <form onSubmit={(event) => void submit(event)}>
         <div className="modal-body">
           <p className="muted">
             {editing
-              ? 'Change the address to search around a different place. Cancel keeps the current one.'
-              : 'Add your address once to see listings within walking or cycling distance.'}
+              ? t('Change the address to search around a different place. Cancel keeps the current one.')
+              : t('Add your address once to see listings within walking or cycling distance.')}
           </p>
           <HomeAddressFields value={value} onChange={setValue} />
           <FormError error={error} />
         </div>
         <footer className="modal-footer">
-          <Button onClick={dismiss}>{editing ? 'Cancel' : 'Not now'}</Button>
+          <Button onClick={dismiss}>{editing ? t('Cancel') : t('Not now')}</Button>
           <Button type="submit" variant="primary" busy={busy}>
-            Save address
+            {t('Save address')}
           </Button>
         </footer>
       </form>
@@ -185,7 +186,7 @@ export function HomeAddressSettings() {
 
   const run = async (next: HomeValue | null) => {
     if (next && !next.coordinates) {
-      toast.error('Press “Find” or click on the map so we know where the address is.')
+      toast.error(t('Press “Find” or click on the map so we know where the address is.'))
       return
     }
     setBusy(true)
@@ -202,16 +203,16 @@ export function HomeAddressSettings() {
 
   return (
     <div className="card form">
-      <h2>Home address</h2>
-      <p className="muted">Optional. With it, “Near me” on the start page shows listings within 1 to 20 km.</p>
+      <h2>{t('Home address')}</h2>
+      <p className="muted">{t('Optional. With it, “Near me” on the start page shows listings within 1 to 20 km.')}</p>
       <HomeAddressFields value={value} onChange={setValue} />
       <div className="row">
         <Button variant="primary" busy={busy} onClick={() => void run(value)}>
-          Save address
+          {t('Save address')}
         </Button>
         {user?.homeCoordinates && (
           <Button variant="ghost" disabled={busy} onClick={() => void run(null)}>
-            Remove
+            {t('Remove')}
           </Button>
         )}
       </div>

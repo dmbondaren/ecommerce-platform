@@ -4,6 +4,7 @@ import type { ServerEvent } from '../api/types'
 import { useAuth } from './auth'
 import { keys, queryClient } from './queryClient'
 import { toast } from './toast'
+import { t } from './i18n'
 
 const MAX_DELAY_MS = 30_000
 
@@ -25,7 +26,7 @@ function handle(event: ServerEvent, logout: () => Promise<void>) {
       toast.info(event.notification.message)
       break
     case 'account.suspended':
-      toast.error('Your account has been suspended.')
+      toast.error(t('Your account has been suspended.'))
       void logout()
       break
   }

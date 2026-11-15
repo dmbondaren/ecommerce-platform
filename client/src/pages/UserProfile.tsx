@@ -7,8 +7,10 @@ import { useAuth } from '../app/auth'
 import { useDocumentTitle, useRequireLogin, useSavedListings } from '../app/hooks'
 import { Icon } from '../components/Icon'
 import { ListingGrid } from '../components/ListingCard'
+import { ProfileCharts } from '../components/ProfileCharts'
 import { Avatar, Button, EmptyState, QueryView, Stars, UserLink } from '../components/ui'
 import { formatDate, formatPrice, timeAgo } from '../lib/format'
+import { t } from '../app/i18n'
 
 function ReviewCard({ review, sellerId }: { review: Review; sellerId: string }) {
   const { user } = useAuth()
@@ -44,20 +46,20 @@ function ReviewCard({ review, sellerId }: { review: Review; sellerId: string }) 
         <span className="muted">{timeAgo(review.createdAt)}</span>
       </header>
       <p className="muted">
-        Bought: {review.item.title} · {formatPrice(review.item.price, review.item.currency)}
+        {t('Bought:')} {review.item.title} · {formatPrice(review.item.price, review.item.currency)}
       </p>
       {review.comment && <p className="prose">{review.comment}</p>}
       {(review.pros || review.cons) && (
         <dl className="pros-cons">
           {review.pros && (
             <div>
-              <dt>Liked</dt>
+              <dt>{t('Liked')}</dt>
               <dd>{review.pros}</dd>
             </div>
           )}
           {review.cons && (
             <div>
-              <dt>Could be better</dt>
+              <dt>{t('Could be better')}</dt>
               <dd>{review.cons}</dd>
             </div>
           )}
@@ -98,14 +100,14 @@ function ReviewCard({ review, sellerId }: { review: Review; sellerId: string }) 
       {canReply && (
         <form className="reply-form" onSubmit={submit}>
           <input
-            aria-label="Reply to this review"
-            placeholder="Write a reply"
+            aria-label={t('Reply to this review')}
+            placeholder={t('Write a reply')}
             maxLength={1000}
             value={reply}
             onChange={(event) => setReply(event.target.value)}
           />
           <Button type="submit" size="sm" busy={sendReply.isPending} disabled={!reply.trim()}>
-            Reply
+            {t('Reply')}
           </Button>
         </form>
       )}
@@ -131,46 +133,48 @@ export function UserProfile() {
             <div>
               <h1>
                 {user.nickname}
-                {user.isStaff && <span className="badge badge-accent">Staff</span>}
+                {user.isStaff && <span className="badge badge-accent">{t('Staff')}</span>}
               </h1>
               <p className="muted">
-                Member since {formatDate(user.memberSince)}
+                {t('Member since')} {formatDate(user.memberSince)}
                 {user.isVerified && ' · e-mail confirmed'}
               </p>
             </div>
             <dl className="stats">
               <div>
-                <dt>Rating</dt>
+                <dt>{t('Rating')}</dt>
                 <dd>{user.stats.rating === null ? '—' : user.stats.rating.toFixed(1)}</dd>
               </div>
               <div>
-                <dt>Reviews</dt>
+                <dt>{t('Reviews')}</dt>
                 <dd>{user.stats.reviewCount}</dd>
               </div>
               <div>
-                <dt>Sold</dt>
+                <dt>{t('Sold')}</dt>
                 <dd>{user.stats.sales}</dd>
               </div>
             </dl>
           </header>
 
+          <ProfileCharts userId={id} />
+
           <div className="tabs" role="tablist">
             <button type="button" role="tab" aria-selected={tab === 'listings'} onClick={() => setTab('listings')}>
-              Listings ({user.stats.activeListings})
+              {t('Listings (')}{user.stats.activeListings})
             </button>
             <button type="button" role="tab" aria-selected={tab === 'reviews'} onClick={() => setTab('reviews')}>
-              Reviews ({user.stats.reviewCount})
+              {t('Reviews (')}{user.stats.reviewCount})
             </button>
           </div>
 
           {tab === 'listings' ? (
-            <QueryView query={listings} empty={<EmptyState title="No active listings" />}>
+            <QueryView query={listings} empty={<EmptyState title={t('No active listings')} />}>
               {(items) => (
                 <ListingGrid listings={items} favoriteIds={saved.favoriteIds} onToggleFavorite={saved.toggleFavorite} />
               )}
             </QueryView>
           ) : (
-            <QueryView query={reviews} empty={<EmptyState title="No reviews yet" />}>
+            <QueryView query={reviews} empty={<EmptyState title={t('No reviews yet')} />}>
               {(items) => (
                 <ul className="stack">
                   {items.map((review) => (

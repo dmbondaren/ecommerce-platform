@@ -12,22 +12,23 @@ import { ConfirmDialog } from '../components/dialogs'
 import { Icon } from '../components/Icon'
 import { Avatar, Button, EmptyState, QueryView, Spinner } from '../components/ui'
 import { formatDate, formatTime, isSameDay, timeAgo } from '../lib/format'
+import { t } from '../app/i18n'
 
 /** Who or what a conversation is "with", from the viewer's point of view. */
 function describe(conversation: Conversation, viewerId: string) {
-  if (conversation.type === 'ADMIN_ROOM') return { name: 'Staff room', detail: 'Visible to all moderators', user: null }
+  if (conversation.type === 'ADMIN_ROOM') return { name: t('Staff room'), detail: t('Visible to all moderators'), user: null }
   if (conversation.type === 'SUPPORT') {
     const own = conversation.buyer?.id === viewerId
     return {
-      name: own ? 'Support' : `Support · ${conversation.buyer?.nickname ?? 'deleted account'}`,
-      detail: own ? 'Our team usually answers within a day' : 'Support request',
+      name: own ? t('Support') : `${t('Support')} · ${conversation.buyer?.nickname ?? t('Deleted account')}`,
+      detail: own ? t('Our team usually answers within a day') : t('Support request'),
       user: own ? null : conversation.buyer,
     }
   }
   const other = conversation.buyer?.id === viewerId ? conversation.seller : conversation.buyer
   return {
-    name: other?.nickname ?? 'Deleted account',
-    detail: conversation.listing?.title ?? 'Listing removed',
+    name: other?.nickname ?? t('Deleted account'),
+    detail: conversation.listing?.title ?? t('Listing removed'),
     user: other,
   }
 }
@@ -53,7 +54,7 @@ function ConversationList({ conversations, activeId, viewerId }: { conversations
                 </span>
                 <span className="chat-item-detail">{info.detail}</span>
                 <span className="chat-item-preview">
-                  {last ? (last.hasAttachment && !last.body ? 'Photo' : last.body || 'Message deleted') : 'No messages yet'}
+                  {last ? (last.hasAttachment && !last.body ? t('Photo') : last.body || t('Message deleted')) : t('No messages yet')}
                 </span>
               </span>
               {conversation.unreadCount > 0 && <span className="counter counter-inline">{conversation.unreadCount}</span>}
@@ -71,7 +72,7 @@ function Bubble({ message, mine, onEdit, onDelete }: { message: Message; mine: b
       <div className={message.deleted ? 'bubble deleted' : 'bubble'}>
         {!mine && message.sender && <span className="bubble-author">{message.sender.nickname}</span>}
         {message.deleted ? (
-          <em>Message deleted</em>
+          <em>{t('Message deleted')}</em>
         ) : (
           <>
             {message.attachmentUrl && (
@@ -90,11 +91,11 @@ function Bubble({ message, mine, onEdit, onDelete }: { message: Message; mine: b
       {mine && !message.deleted && (
         <div className="bubble-tools">
           {message.body && (
-            <button type="button" className="icon-btn" onClick={onEdit} aria-label="Edit message">
+            <button type="button" className="icon-btn" onClick={onEdit} aria-label={t('Edit message')}>
               <Icon name="edit" size={16} />
             </button>
           )}
-          <button type="button" className="icon-btn" onClick={onDelete} aria-label="Delete message">
+          <button type="button" className="icon-btn" onClick={onDelete} aria-label={t('Delete message')}>
             <Icon name="trash" size={16} />
           </button>
         </div>
@@ -182,9 +183,9 @@ function Thread({ id, viewerId }: { id: string; viewerId: string }) {
   const info = conversation.data ? describe(conversation.data, viewerId) : null
 
   return (
-    <section className="chat-thread" aria-label="Conversation">
+    <section className="chat-thread" aria-label={t('Conversation')}>
       <header className="chat-header">
-        <Link to="/messages" className="icon-btn chat-back" aria-label="Back to conversations">
+        <Link to="/messages" className="icon-btn chat-back" aria-label={t('Back to conversations')}>
           <Icon name="left" />
         </Link>
         <div className="chat-header-main">
@@ -209,7 +210,7 @@ function Thread({ id, viewerId }: { id: string; viewerId: string }) {
                 .catch((error: unknown) => toast.error(errorMessage(error)))
             }
           >
-            Remove chat
+            {t('Remove chat')}
           </Button>
         )}
       </header>
@@ -218,17 +219,17 @@ function Thread({ id, viewerId }: { id: string; viewerId: string }) {
         {history.isPending ? (
           <Spinner />
         ) : history.isError ? (
-          <EmptyState title="This conversation could not be loaded">
-            <Button onClick={() => void history.refetch()}>Try again</Button>
+          <EmptyState title={t('This conversation could not be loaded')}>
+            <Button onClick={() => void history.refetch()}>{t('Try again')}</Button>
           </EmptyState>
         ) : (
           <>
             {history.hasNextPage && (
               <Button size="sm" variant="ghost" busy={history.isFetchingNextPage} onClick={() => void history.fetchNextPage()}>
-                Show earlier messages
+                {t('Show earlier messages')}
               </Button>
             )}
-            {messages.length === 0 && <p className="muted center">No messages yet. Say hello.</p>}
+            {messages.length === 0 && <p className="muted center">{t('No messages yet. Say hello.')}</p>}
             {messages.map((message, index) => {
               const previous = messages[index - 1]
               return (
@@ -256,7 +257,7 @@ function Thread({ id, viewerId }: { id: string; viewerId: string }) {
       <form className="chat-composer" onSubmit={submit}>
         {editing && (
           <p className="chat-editing">
-            Editing a message
+            {t('Editing a message')}
             <button
               type="button"
               className="link"
@@ -265,7 +266,7 @@ function Thread({ id, viewerId }: { id: string; viewerId: string }) {
                 setText('')
               }}
             >
-              Cancel
+              {t('Cancel')}
             </button>
           </p>
         )}
@@ -276,7 +277,7 @@ function Thread({ id, viewerId }: { id: string; viewerId: string }) {
               className="icon-btn"
               disabled={uploading}
               onClick={() => fileInput.current?.click()}
-              aria-label="Attach a photo"
+              aria-label={t('Attach a photo')}
             >
               {uploading ? <span className="spinner spinner-sm" /> : <Icon name="clip" />}
             </button>
@@ -284,14 +285,14 @@ function Thread({ id, viewerId }: { id: string; viewerId: string }) {
           <textarea
             rows={1}
             maxLength={4000}
-            placeholder="Write a message"
-            aria-label="Message"
+            placeholder={t('Write a message')}
+            aria-label={t('Message')}
             value={text}
             onChange={(event) => setText(event.target.value)}
             onKeyDown={onKeyDown}
           />
           <Button type="submit" variant="primary" icon="send" busy={send.isPending} disabled={!text.trim()}>
-            {editing ? 'Save' : 'Send'}
+            {editing ? t('Save') : t('Send')}
           </Button>
         </div>
         <input
@@ -305,8 +306,8 @@ function Thread({ id, viewerId }: { id: string; viewerId: string }) {
 
       {deleting && (
         <ConfirmDialog
-          title="Delete this message?"
-          confirmLabel="Delete"
+          title={t('Delete this message?')}
+          confirmLabel={t('Delete')}
           danger
           onClose={() => setDeleting(null)}
           onConfirm={async () => {
@@ -314,7 +315,7 @@ function Thread({ id, viewerId }: { id: string; viewerId: string }) {
             await refresh()
           }}
         >
-          <p>It will be removed for everyone in the conversation.</p>
+          <p>{t('It will be removed for everyone in the conversation.')}</p>
         </ConfirmDialog>
       )}
     </section>
@@ -325,18 +326,18 @@ export function Messages() {
   const { id } = useParams()
   const { user } = useAuth()
   const conversations = useQuery({ queryKey: keys.conversations, queryFn: chatApi.list })
-  useDocumentTitle('Messages')
+  useDocumentTitle(t('Messages'))
   if (!user) return null
 
   return (
     <div className={id ? 'chat chat-open' : 'chat'}>
-      <aside className="chat-sidebar" aria-label="Conversations">
-        <h1>Messages</h1>
+      <aside className="chat-sidebar" aria-label={t('Conversations')}>
+        <h1>{t('Messages')}</h1>
         <QueryView
           query={conversations}
           empty={
-            <EmptyState title="No conversations yet">
-              <p>Open a listing and message the seller to start one.</p>
+            <EmptyState title={t('No conversations yet')}>
+              <p>{t('Open a listing and message the seller to start one.')}</p>
             </EmptyState>
           }
         >
@@ -347,7 +348,7 @@ export function Messages() {
         <Thread key={id} id={id} viewerId={user.id} />
       ) : (
         <div className="chat-thread chat-placeholder">
-          <EmptyState title="Select a conversation" />
+          <EmptyState title={t('Select a conversation')} />
         </div>
       )}
     </div>

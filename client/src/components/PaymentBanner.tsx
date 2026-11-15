@@ -9,6 +9,7 @@ import { toast } from '../app/toast'
 import { formatCountdown, formatPrice } from '../lib/format'
 import { Icon } from './Icon'
 import { Button, Modal } from './ui'
+import { t } from '../app/i18n'
 
 /** Re-renders once a second while `active`, and returns the current time. */
 export function useNow(active: boolean): number {
@@ -28,8 +29,8 @@ export function PaymentDetailsDialog({ order, onClose }: { order: Purchase; onCl
   const payment = order.payment
   const copy = (value: string) => {
     navigator.clipboard?.writeText(value).then(
-      () => toast.success('Copied'),
-      () => toast.error('Could not copy. Please select the text instead.'),
+      () => toast.success(t('Copied')),
+      () => toast.error(t('Could not copy. Please select the text instead.')),
     )
   }
   const rows: [string, string][] = payment
@@ -41,11 +42,10 @@ export function PaymentDetailsDialog({ order, onClose }: { order: Purchase; onCl
       ]
     : []
   return (
-    <Modal title="Payment details" onClose={onClose}>
+    <Modal title={t('Payment details')} onClose={onClose}>
       <div className="modal-body">
         <p>
-          Transfer the amount for <strong>{order.title}</strong> with your banking app, then press “I have paid”.
-          The same details were sent to your e-mail address.
+          {t('Transfer the amount for')} <strong>{order.title}</strong> {t('with your banking app, then press “I have paid”. The same details were sent to your e-mail address.')}
         </p>
         <dl className="payment-details">
           {rows.map(([label, value]) => (
@@ -54,18 +54,18 @@ export function PaymentDetailsDialog({ order, onClose }: { order: Purchase; onCl
               <dd>
                 {value}
                 <button type="button" className="link" onClick={() => copy(value)}>
-                  Copy
+                  {t('Copy')}
                 </button>
               </dd>
             </div>
           ))}
         </dl>
         <p className="muted">
-          This is a demonstration project: no real payment is processed and you should not send money.
+          {t('This is a demonstration project: no real payment is processed and you should not send money.')}
         </p>
       </div>
       <footer className="modal-footer">
-        <Button onClick={onClose}>Close</Button>
+        <Button onClick={onClose}>{t('Close')}</Button>
       </footer>
     </Modal>
   )
@@ -77,12 +77,12 @@ export function usePaymentActions() {
   const refresh = () => client.invalidateQueries()
   const confirm = useMutation({
     mutationFn: orderApi.confirmPayment,
-    onSuccess: () => toast.success('Payment confirmed. The seller has been notified.'),
+    onSuccess: () => toast.success(t('Payment confirmed. The seller has been notified.')),
     onSettled: refresh,
   })
   const cancel = useMutation({
     mutationFn: orderApi.cancel,
-    onSuccess: () => toast.info('Reservation cancelled. The item is on sale again.'),
+    onSuccess: () => toast.info(t('Reservation cancelled. The item is on sale again.')),
     onSettled: refresh,
   })
   return { confirm, cancel }
@@ -122,27 +122,27 @@ export function PaymentBanner() {
   const urgent = left < 2 * 60_000
 
   return (
-    <section className={urgent ? 'pay-banner urgent' : 'pay-banner'} aria-label="Payment reminder">
+    <section className={urgent ? 'pay-banner urgent' : 'pay-banner'} aria-label={t('Payment reminder')}>
       <div className="container pay-banner-inner">
         <Icon name="clock" />
         <p>
-          <strong>{order.title}</strong> is reserved for you. Pay {formatPrice(order.price, order.currency)} within{' '}
+          <strong>{order.title}</strong> {t('is reserved for you. Pay')} {formatPrice(order.price, order.currency)} {t('within')}{' '}
           <strong className="countdown" role="timer">
             {formatCountdown(left)}
           </strong>
           {pending.length > 1 && (
             <>
               {' '}
-              · <Link to="/account/purchases">{pending.length - 1} more waiting</Link>
+              · <Link to="/account/purchases">{pending.length - 1} {t('more waiting')}</Link>
             </>
           )}
         </p>
         <div className="row">
           <Button size="sm" onClick={() => setShowDetails(true)}>
-            Payment details
+            {t('Payment details')}
           </Button>
           <Button size="sm" variant="primary" busy={confirm.isPending} onClick={() => confirm.mutate(order.id)}>
-            I have paid
+            {t('I have paid')}
           </Button>
         </div>
       </div>

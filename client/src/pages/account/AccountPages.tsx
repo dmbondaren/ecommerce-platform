@@ -19,6 +19,7 @@ import {
   STATUS_LABELS,
   timeAgo,
 } from '../../lib/format'
+import { t } from '../../app/i18n'
 
 const SECTIONS = [
   ['/account', 'Profile'],
@@ -31,13 +32,13 @@ const SECTIONS = [
 ] as const
 
 export function AccountLayout() {
-  useDocumentTitle('My account')
+  useDocumentTitle(t('My account'))
   return (
     <div className="account">
-      <nav className="side-nav" aria-label="Account">
+      <nav className="side-nav" aria-label={t('Account')}>
         {SECTIONS.map(([to, label]) => (
           <NavLink key={to} to={to} end={to === '/account'}>
-            {label}
+            {t(label)}
           </NavLink>
         ))}
       </nav>
@@ -58,16 +59,16 @@ export function MyListings() {
   return (
     <>
       <div className="page-header">
-        <h1>My listings</h1>
+        <h1>{t('My listings')}</h1>
         <Link to="/sell" className="btn btn-primary btn-md">
-          New listing
+          {t('New listing')}
         </Link>
       </div>
       <QueryView
         query={query}
         empty={
-          <EmptyState title="You have not listed anything yet">
-            <Link to="/sell">Sell your first item</Link>
+          <EmptyState title={t('You have not listed anything yet')}>
+            <Link to="/sell">{t('Sell your first item')}</Link>
           </EmptyState>
         }
       >
@@ -81,21 +82,21 @@ export function MyListings() {
                 <div className="row-main">
                   <Link to={`/listings/${item.id}`}>{item.title}</Link>
                   <span className="muted">
-                    {formatPrice(item.price, item.currency)} · {item.viewCount} views · {timeAgo(item.createdAt)}
+                    {formatPrice(item.price, item.currency)} · {item.viewCount} {t('views ·')} {timeAgo(item.createdAt)}
                   </span>
-                  {item.moderationReason && <span className="field-error">Moderator: {item.moderationReason}</span>}
+                  {item.moderationReason && <span className="field-error">{t('Moderator:')} {item.moderationReason}</span>}
                 </div>
-                <span className={`badge status-${item.status.toLowerCase()}`}>{STATUS_LABELS[item.status]}</span>
+                <span className={`badge status-${item.status.toLowerCase()}`}>{t(STATUS_LABELS[item.status])}</span>
                 <div className="row">
                   {item.status === 'RESERVED' ? (
-                    <span className="muted">Awaiting payment</span>
+                    <span className="muted">{t('Awaiting payment')}</span>
                   ) : item.status === 'SOLD' ? (
                     <Button size="sm" busy={relist.isPending && relist.variables === item.id} onClick={() => relist.mutate(item.id)}>
-                      List again
+                      {t('List again')}
                     </Button>
                   ) : (
                     <Link className="btn btn-secondary btn-sm" to={`/listings/${item.id}/edit`}>
-                      Edit
+                      {t('Edit')}
                     </Link>
                   )}
                   {item.status !== 'RESERVED' && (
@@ -109,17 +110,17 @@ export function MyListings() {
       </QueryView>
       {deleting && (
         <ConfirmDialog
-          title="Delete this listing?"
-          confirmLabel="Delete listing"
+          title={t('Delete this listing?')}
+          confirmLabel={t('Delete listing')}
           danger
           onClose={() => setDeleting(null)}
           onConfirm={async () => {
             await listingApi.remove(deleting.id)
             await refresh()
-            toast.success('Listing deleted')
+            toast.success(t('Listing deleted'))
           }}
         >
-          <p>“{deleting.title}” will disappear from the marketplace. This cannot be undone.</p>
+          <p>“{deleting.title}{t('” will disappear from the marketplace. This cannot be undone.')}</p>
         </ConfirmDialog>
       )}
     </>
@@ -136,7 +137,7 @@ function SavedGrid({ title, queryKey, queryFn, emptyTitle }: { title: string; qu
         query={query}
         empty={
           <EmptyState title={emptyTitle}>
-            <Link to="/">Browse the listings</Link>
+            <Link to="/">{t('Browse the listings')}</Link>
           </EmptyState>
         }
       >
@@ -147,10 +148,10 @@ function SavedGrid({ title, queryKey, queryFn, emptyTitle }: { title: string; qu
 }
 
 export const Favorites = () => (
-  <SavedGrid title="Favourites" queryKey={keys.favorites} queryFn={listingApi.favorites} emptyTitle="Nothing saved yet" />
+  <SavedGrid title={t('Favourites')} queryKey={keys.favorites} queryFn={listingApi.favorites} emptyTitle={t('Nothing saved yet')} />
 )
 export const History = () => (
-  <SavedGrid title="Recently viewed" queryKey={['me', 'history']} queryFn={listingApi.history} emptyTitle="Nothing viewed yet" />
+  <SavedGrid title={t('Recently viewed')} queryKey={['me', 'history']} queryFn={listingApi.history} emptyTitle={t('Nothing viewed yet')} />
 )
 
 function ReviewDialog({ order, onClose }: { order: Order; onClose: () => void }) {
@@ -164,7 +165,7 @@ function ReviewDialog({ order, onClose }: { order: Order; onClose: () => void })
     meta: { silent: true },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: keys.purchases })
-      toast.success('Thank you for your review')
+      toast.success(t('Thank you for your review'))
       onClose()
     },
   })
@@ -179,21 +180,21 @@ function ReviewDialog({ order, onClose }: { order: Order; onClose: () => void })
       <form onSubmit={submit}>
         <div className="modal-body">
           <Stars value={rating} onChange={setRating} />
-          <Field label="How did it go? (optional)" errors={errors.comment}>
+          <Field label={t('How did it go? (optional)')} errors={errors.comment}>
             {(props) => <textarea {...props} rows={4} maxLength={2000} value={comment} onChange={(event) => setComment(event.target.value)} />}
           </Field>
-          <Field label="What you liked (optional)" errors={errors.pros}>
+          <Field label={t('What you liked (optional)')} errors={errors.pros}>
             {(props) => <input {...props} maxLength={500} value={pros} onChange={(event) => setPros(event.target.value)} />}
           </Field>
-          <Field label="What could be better (optional)" errors={errors.cons}>
+          <Field label={t('What could be better (optional)')} errors={errors.cons}>
             {(props) => <input {...props} maxLength={500} value={cons} onChange={(event) => setCons(event.target.value)} />}
           </Field>
           {Object.keys(errors).length === 0 && <FormError error={review.error} />}
         </div>
         <footer className="modal-footer">
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t('Cancel')}</Button>
           <Button type="submit" variant="primary" busy={review.isPending}>
-            Publish review
+            {t('Publish review')}
           </Button>
         </footer>
       </form>
@@ -215,7 +216,7 @@ function OrderRow({ order, children }: { order: Order; children: ReactNode }) {
         {children}
       </div>
       <strong>{formatPrice(order.price, order.currency)}</strong>
-      <span className={`badge order-${order.status.toLowerCase()}`}>{ORDER_STATUS_LABELS[order.status]}</span>
+      <span className={`badge order-${order.status.toLowerCase()}`}>{t(ORDER_STATUS_LABELS[order.status])}</span>
     </li>
   )
 }
@@ -229,23 +230,23 @@ export function Purchases() {
 
   return (
     <>
-      <h1>Purchases</h1>
-      <QueryView query={query} empty={<EmptyState title="You have not bought anything yet" />}>
+      <h1>{t('Purchases')}</h1>
+      <QueryView query={query} empty={<EmptyState title={t('You have not bought anything yet')} />}>
         {(orders) => (
           <ul className="rows card">
             {orders.map((order) => (
               <OrderRow key={order.id} order={order}>
                 <span className="inline">
-                  <span className="muted">Seller:</span>
+                  <span className="muted">{t('Seller:')}</span>
                   <UserLink user={order.seller} />
                 </span>
                 {isAwaitingPayment(order, now) && order.expiresAt ? (
                   <div className="row">
                     <span className="countdown">
-                      Pay within {formatCountdown(new Date(order.expiresAt).getTime() - now)}
+                      {t('Pay within')} {formatCountdown(new Date(order.expiresAt).getTime() - now)}
                     </span>
                     <Button size="sm" onClick={() => setPaying(order)}>
-                      Payment details
+                      {t('Payment details')}
                     </Button>
                     <Button
                       size="sm"
@@ -253,7 +254,7 @@ export function Purchases() {
                       busy={confirm.isPending && confirm.variables === order.id}
                       onClick={() => confirm.mutate(order.id)}
                     >
-                      I have paid
+                      {t('I have paid')}
                     </Button>
                     <Button
                       size="sm"
@@ -261,7 +262,7 @@ export function Purchases() {
                       busy={cancel.isPending && cancel.variables === order.id}
                       onClick={() => cancel.mutate(order.id)}
                     >
-                      Cancel
+                      {t('Cancel')}
                     </Button>
                   </div>
                 ) : order.status === 'PAID' ? (
@@ -271,14 +272,14 @@ export function Purchases() {
                     order.seller && (
                       <div className="row">
                         <Button size="sm" onClick={() => setReviewing(order)}>
-                          Leave a review
+                          {t('Leave a review')}
                         </Button>
                       </div>
                     )
                   )
                 ) : (
                   order.status !== 'PENDING_PAYMENT' && (
-                    <span className="muted">The reservation ended without a payment.</span>
+                    <span className="muted">{t('The reservation ended without a payment.')}</span>
                   )
                 )}
               </OrderRow>
@@ -300,27 +301,27 @@ function SalesAnalytics() {
   const peak = Math.max(1, ...summary.monthly.map((entry) => entry.revenue))
 
   return (
-    <section className="card analytics" aria-label="Sales analytics">
+    <section className="card analytics" aria-label={t('Sales analytics')}>
       <dl className="stats">
         {summary.totals.map((total) => (
           <div key={total.currency}>
-            <dt>Revenue</dt>
+            <dt>{t('Revenue')}</dt>
             <dd>{formatPrice(total.revenue, total.currency)}</dd>
           </div>
         ))}
         <div>
-          <dt>Items sold</dt>
+          <dt>{t('Items sold')}</dt>
           <dd>{summary.totals.reduce((sum, total) => sum + total.count, 0)}</dd>
         </div>
         {summary.averageOrderValue !== null && (
           <div>
-            <dt>Average sale</dt>
+            <dt>{t('Average sale')}</dt>
             <dd>{formatPrice(summary.averageOrderValue, currency)}</dd>
           </div>
         )}
       </dl>
       <figure className="chart">
-        <figcaption className="muted">Revenue per month, {currency}</figcaption>
+        <figcaption className="muted">{t('Revenue per month,')} {currency}</figcaption>
         <ol>
           {summary.monthly.map((entry) => (
             <li key={entry.month} title={`${formatPrice(entry.revenue, currency)} · ${entry.count} sold`}>
@@ -328,7 +329,7 @@ function SalesAnalytics() {
               <span className="chart-bar" style={{ height: `${(entry.revenue / peak) * 100}%` }} />
               <span className="chart-label">{formatMonth(entry.month)}</span>
               <span className="sr-only">
-                : {formatPrice(entry.revenue, currency)}, {entry.count} sold
+                : {formatPrice(entry.revenue, currency)}, {entry.count} {t('sold')}
               </span>
             </li>
           ))}
@@ -342,15 +343,15 @@ export function Sales() {
   const query = useQuery({ queryKey: keys.sales, queryFn: orderApi.sales })
   return (
     <>
-      <h1>Sales</h1>
+      <h1>{t('Sales')}</h1>
       <SalesAnalytics />
-      <QueryView query={query} empty={<EmptyState title="You have not sold anything yet" />}>
+      <QueryView query={query} empty={<EmptyState title={t('You have not sold anything yet')} />}>
         {(orders) => (
           <ul className="rows card">
             {orders.map((order) => (
               <OrderRow key={order.id} order={order}>
                 <span className="inline">
-                  <span className="muted">Buyer:</span>
+                  <span className="muted">{t('Buyer:')}</span>
                   <UserLink user={order.buyer} />
                 </span>
                 {order.review && <Stars value={order.review.rating} />}
@@ -384,11 +385,11 @@ export function Notifications() {
 
   return (
     <>
-      <h1>Notifications</h1>
+      <h1>{t('Notifications')}</h1>
       <QueryView query={query}>
         {(data) =>
           data.items.length === 0 ? (
-            <EmptyState title="No notifications yet" />
+            <EmptyState title={t('No notifications yet')} />
           ) : (
             <ul className="rows card">
               {data.items.map((item) => (

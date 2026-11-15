@@ -1,8 +1,8 @@
-const LOCALE = 'en-CH'
+import { getLang, locale, t } from '../app/i18n'
 
 export function formatPrice(price: number, currency: string): string {
-  if (price === 0) return 'Free'
-  return new Intl.NumberFormat(LOCALE, {
+  if (price === 0) return t('Free')
+  return new Intl.NumberFormat(locale(), {
     style: 'currency',
     currency,
     minimumFractionDigits: Number.isInteger(price) ? 0 : 2,
@@ -11,10 +11,10 @@ export function formatPrice(price: number, currency: string): string {
 }
 
 export const formatDate = (iso: string) =>
-  new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso))
+  new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso))
 
 export const formatTime = (iso: string) =>
-  new Intl.DateTimeFormat(LOCALE, { hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
+  new Intl.DateTimeFormat(locale(), { hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
 
 const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ['year', 365 * 24 * 3600],
@@ -28,12 +28,12 @@ const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
 /** "3 hours ago", "yesterday", "just now". */
 export function timeAgo(iso: string, now = new Date()): string {
   const seconds = Math.round((now.getTime() - new Date(iso).getTime()) / 1000)
-  if (seconds < 60) return 'just now'
-  const formatter = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
+  if (seconds < 60) return t('just now')
+  const formatter = new Intl.RelativeTimeFormat(getLang(), { numeric: 'auto' })
   for (const [unit, size] of UNITS) {
     if (seconds >= size) return formatter.format(-Math.floor(seconds / size), unit)
   }
-  return 'just now'
+  return t('just now')
 }
 
 /** Whether two timestamps fall on the same calendar day in the user's time zone. */
@@ -63,7 +63,7 @@ export function formatCountdown(milliseconds: number): string {
 
 /** "2026-11" -> "Nov". */
 export const formatMonth = (month: string) =>
-  new Intl.DateTimeFormat(LOCALE, { month: 'short', timeZone: 'UTC' }).format(new Date(`${month}-01T00:00:00Z`))
+  new Intl.DateTimeFormat(locale(), { month: 'short', timeZone: 'UTC' }).format(new Date(`${month}-01T00:00:00Z`))
 
 /** Page numbers to show around the current page; `null` stands for a gap. */
 export function pageWindow(current: number, total: number, radius = 1): (number | null)[] {

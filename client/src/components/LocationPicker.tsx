@@ -2,6 +2,7 @@ import { lazy, Suspense, useRef, useState } from 'react'
 import type { Coordinates } from '../api/types'
 import { formatAddress, googleMapsUrl, type AddressParts } from '../lib/address'
 import { Button, Spinner } from './ui'
+import { t } from '../app/i18n'
 
 // Leaflet is sizeable and only needed where a map is shown.
 export const LazyMap = lazy(() => import('./MapView'))
@@ -15,7 +16,7 @@ interface SearchResult {
 export async function geocode(address: string): Promise<Coordinates | null> {
   const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(address)}`
   const response = await fetch(url, { headers: { Accept: 'application/json' } })
-  if (!response.ok) throw new Error('The address search is not available right now')
+  if (!response.ok) throw new Error(t('The address search is not available right now'))
   const [first] = (await response.json()) as SearchResult[]
   if (!first) return null
   const position = { lat: Number(first.lat), lng: Number(first.lon) }
@@ -52,7 +53,7 @@ export function LocationPicker({ address, value, onChange, onAddressChange }: Pr
   const pick = (position: Coordinates) => {
     onChange(position)
     const pickId = ++lastPick.current
-    setMessage('Looking up the address of this spot…')
+    setMessage(t('Looking up the address of this spot…'))
     reverseGeocode(position)
       .then((found) => {
         if (pickId !== lastPick.current) return
@@ -60,11 +61,11 @@ export function LocationPicker({ address, value, onChange, onAddressChange }: Pr
           onAddressChange(found)
           setMessage(`The location was set to “${found}”.`)
         } else {
-          setMessage('No address was found for this spot, so the location text was left as it is.')
+          setMessage(t('No address was found for this spot, so the location text was left as it is.'))
         }
       })
       .catch(() => {
-        if (pickId === lastPick.current) setMessage('The address could not be looked up; please type it in yourself.')
+        if (pickId === lastPick.current) setMessage(t('The address could not be looked up; please type it in yourself.'))
       })
   }
 
@@ -72,7 +73,7 @@ export function LocationPicker({ address, value, onChange, onAddressChange }: Pr
 
   const find = async () => {
     if (!address.trim()) {
-      setMessage('Enter a location above first, e.g. “Bahnhofstrasse 1, Zürich”.')
+      setMessage(t('Enter a location above first, e.g. “Bahnhofstrasse 1, Zürich”.'))
       return
     }
     setBusy(true)
@@ -80,9 +81,9 @@ export function LocationPicker({ address, value, onChange, onAddressChange }: Pr
     try {
       const found = await geocode(address)
       if (found) onChange(found)
-      else setMessage('This address was not found. Click on the map to place the flag yourself.')
+      else setMessage(t('This address was not found. Click on the map to place the flag yourself.'))
     } catch {
-      setMessage('The address search is not available right now. Click on the map to place the flag yourself.')
+      setMessage(t('The address search is not available right now. Click on the map to place the flag yourself.'))
     } finally {
       setBusy(false)
     }
@@ -99,30 +100,30 @@ export function LocationPicker({ address, value, onChange, onAddressChange }: Pr
             if (!event.target.checked) onChange(null)
           }}
         />
-        Show the location on a map
+        {t('Show the location on a map')}
       </label>
       {open && (
         <>
           <div className="row">
             <Button size="sm" busy={busy} onClick={() => void find()}>
-              Find the address on the map
+              {t('Find the address on the map')}
             </Button>
             {value && (
               <Button size="sm" variant="ghost" onClick={() => onChange(null)}>
-                Remove the flag
+                {t('Remove the flag')}
               </Button>
             )}
             {value && mapsUrl && (
               <a className="btn btn-ghost btn-sm" href={mapsUrl} target="_blank" rel="noreferrer">
-                Check in Google Maps
+                {t('Check in Google Maps')}
               </a>
             )}
           </div>
           <p className="field-hint" aria-live="polite">
             {message ??
-              'Click on the map or drag the flag: the location above is filled in with the address of that spot. Buyers will see this spot, so choose a nearby public place if you prefer not to show your home.'}
+              t('Click on the map or drag the flag: the location above is filled in with the address of that spot. Buyers will see this spot, so choose a nearby public place if you prefer not to show your home.')}
           </p>
-          <Suspense fallback={<Spinner label="Loading the map" />}>
+          <Suspense fallback={<Spinner label={t('Loading the map')} />}>
             <LazyMap position={value} onChange={pick} />
           </Suspense>
         </>

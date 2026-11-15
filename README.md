@@ -13,6 +13,8 @@ It started as my bachelor's thesis (Express + Sequelize + MySQL, one 1 000-line 
 - Search with filters (category, price, currency), sorting and pagination; the state lives in the URL, so a search can be shared
 - “Near me”: listings within 1–20 km of the user's home address, which is optional and never shown to others
 - Favourites, cart, browsing history, notifications when a saved item gets cheaper
+- Public profiles with statistics: sales and purchases over time, and category breakdowns
+- Interface in English, German, Ukrainian and Russian, switchable in the header
 - Checkout that reserves an item for exactly one buyer, even when two people buy at the same moment
 - Simulated payment in the style of a peer-to-peer trade: transfer details by e-mail, a 15-minute countdown, an “I have paid” confirmation, and automatic release of unpaid reservations
 - Optional map position per listing (Leaflet and OpenStreetMap), found from the address or placed by hand

@@ -2,6 +2,7 @@ import * as L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useEffect, useRef } from 'react'
 import type { Coordinates } from '../api/types'
+import { t } from '../app/i18n'
 
 // Zürich: where the map opens before a place has been chosen.
 const DEFAULT_CENTER: Coordinates = { lat: 47.3769, lng: 8.5417 }
@@ -78,5 +79,5 @@ export default function MapView({ position, onChange }: Props) {
     instance.setView(latLng, Math.max(instance.getZoom(), 15))
   }, [position, editable])
 
-  return <div ref={container} className="map" role="application" aria-label="Map" />
+  return <div ref={container} className="map" role="application" aria-label={t('Map')} />
 }

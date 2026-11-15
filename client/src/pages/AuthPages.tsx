@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { ApiError } from '../api/client'
 import { authApi } from '../api/endpoints'
 import { useAuth } from '../app/auth'
 import { safeNext, useDocumentTitle } from '../app/hooks'
 import { Button, Field, FormError, Spinner, fieldErrors } from '../components/ui'
+import { t } from '../app/i18n'
 
 function AuthCard({ title, children, footer }: { title: string; children: ReactNode; footer?: ReactNode }) {
   useDocumentTitle(title)
@@ -45,36 +47,39 @@ function CredentialsForm({ mode }: { mode: 'login' | 'register' }) {
   const next = safeNext(params.get('next'))
   const form = useSubmit(() => (mode === 'login' ? login(email, password) : register(email, password)))
 
+  // A wrong password at sign-in, or an address that is already registered at sign-up.
+  const needsReset = form.error instanceof ApiError && (form.error.status === 401 || form.error.status === 409)
+
   // Covers both a successful submit and opening the page while already signed in.
   if (user) return <Navigate to={next} replace />
   const query = params.get('next') ? `?next=${encodeURIComponent(next)}` : ''
 
   return (
     <AuthCard
-      title={mode === 'login' ? 'Sign in' : 'Create an account'}
+      title={mode === 'login' ? t('Sign in') : t('Create an account')}
       footer={
         mode === 'login' ? (
           <>
-            New here? <Link to={`/register${query}`}>Create an account</Link>
+            {t('New here?')} <Link to={`/register${query}`}>{t('Create an account')}</Link>
           </>
         ) : (
           <>
-            Already registered? <Link to={`/login${query}`}>Sign in</Link>
+            {t('Already registered?')} <Link to={`/login${query}`}>{t('Sign in')}</Link>
           </>
         )
       }
     >
       <form className="form" onSubmit={form.onSubmit}>
         {Object.keys(form.errors).length === 0 && <FormError error={form.error} />}
-        <Field label="E-mail" errors={form.errors.email}>
+        <Field label={t('E-mail')} errors={form.errors.email}>
           {(props) => (
             <input {...props} type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} />
           )}
         </Field>
         <Field
-          label="Password"
+          label={t('Password')}
           errors={form.errors.password}
-          hint={mode === 'register' ? 'At least 8 characters.' : undefined}
+          hint={mode === 'register' ? t('At least 8 characters.') : undefined}
         >
           {(props) => (
             <input
@@ -90,11 +95,18 @@ function CredentialsForm({ mode }: { mode: 'login' | 'register' }) {
           )}
         </Field>
         <Button type="submit" variant="primary" busy={form.busy}>
-          {mode === 'login' ? 'Sign in' : 'Create account'}
+          {mode === 'login' ? t('Sign in') : t('Create account')}
         </Button>
-        {mode === 'login' && (
-          <Link to="/forgot-password" className="link center">
-            Forgot your password?
+        {(mode === 'login' || needsReset) && (
+          // After a failed attempt the link is highlighted and takes the typed
+          // e-mail along (in the navigation state, not in the address bar).
+          <Link
+            to="/forgot-password"
+            state={{ email }}
+            className={needsReset ? 'reset-link attention' : 'link center'}
+            aria-live="polite"
+          >
+            {needsReset ? t('Forgot your password? Reset it') : t('Forgot your password?')}
           </Link>
         )}
       </form>
@@ -106,7 +118,9 @@ export const Login = () => <CredentialsForm key="login" mode="login" />
 export const Register = () => <CredentialsForm key="register" mode="register" />
 
 export function ForgotPassword() {
-  const [email, setEmail] = useState('')
+  const location = useLocation()
+  const carried = (location.state as { email?: unknown } | null)?.email
+  const [email, setEmail] = useState(typeof carried === 'string' ? carried : '')
   const [sent, setSent] = useState(false)
   const form = useSubmit(async () => {
     await authApi.requestPasswordReset(email)
@@ -114,22 +128,21 @@ export function ForgotPassword() {
   })
 
   return (
-    <AuthCard title="Reset your password" footer={<Link to="/login">Back to sign in</Link>}>
+    <AuthCard title={t('Reset your password')} footer={<Link to="/login">{t('Back to sign in')}</Link>}>
       {sent ? (
         <p role="status">
-          We sent a link to choose a new password to <strong>{email}</strong>. It is valid for one hour. If it
-          does not arrive within a few minutes, check the spam folder.
+          {t('We sent a link to choose a new password to')} <strong>{email}</strong>{t('. It is valid for one hour. If it does not arrive within a few minutes, check the spam folder.')}
         </p>
       ) : (
         <form className="form" onSubmit={form.onSubmit}>
           <FormError error={form.error} />
-          <Field label="E-mail" hint="We will send you a link to choose a new password.">
+          <Field label={t('E-mail')} hint={t('We will send you a link to choose a new password.')}>
             {(props) => (
               <input {...props} type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} />
             )}
           </Field>
           <Button type="submit" variant="primary" busy={form.busy}>
-            Send reset link
+            {t('Send reset link')}
           </Button>
         </form>
       )}
@@ -148,11 +161,11 @@ export function ResetPassword() {
   })
 
   return (
-    <AuthCard title="Choose a new password" footer={<Link to="/login">Back to sign in</Link>}>
+    <AuthCard title={t('Choose a new password')} footer={<Link to="/login">{t('Back to sign in')}</Link>}>
       {token ? (
         <form className="form" onSubmit={form.onSubmit}>
           {!form.errors.password && <FormError error={form.error} />}
-          <Field label="New password" errors={form.errors.password} hint="At least 8 characters. You will be signed out on all devices.">
+          <Field label={t('New password')} errors={form.errors.password} hint={t('At least 8 characters. You will be signed out on all devices.')}>
             {(props) => (
               <input
                 {...props}
@@ -167,11 +180,11 @@ export function ResetPassword() {
             )}
           </Field>
           <Button type="submit" variant="primary" busy={form.busy}>
-            Save password
+            {t('Save password')}
           </Button>
         </form>
       ) : (
-        <p role="alert">This link is incomplete. Please use the link from the e-mail, or request a new one.</p>
+        <p role="alert">{t('This link is incomplete. Please use the link from the e-mail, or request a new one.')}</p>
       )}
     </AuthCard>
   )
@@ -194,19 +207,19 @@ export function VerifyEmail() {
   }, [token])
 
   return (
-    <AuthCard title="E-mail confirmation">
-      {state === 'pending' && <Spinner label="Confirming your e-mail" />}
+    <AuthCard title={t('E-mail confirmation')}>
+      {state === 'pending' && <Spinner label={t('Confirming your e-mail')} />}
       {state === 'done' && (
         <>
-          <p role="status">Your e-mail address is confirmed. You can publish listings now.</p>
+          <p role="status">{t('Your e-mail address is confirmed. You can publish listings now.')}</p>
           {/* A full reload picks up the verified state of the account. */}
           <a className="btn btn-primary btn-md" href="/sell">
-            Sell an item
+            {t('Sell an item')}
           </a>
         </>
       )}
       {state === 'failed' && (
-        <p role="alert">This link is invalid or has expired. Sign in and use “Send it again” in the banner at the top.</p>
+        <p role="alert">{t('This link is invalid or has expired. Sign in and use “Send it again” in the banner at the top.')}</p>
       )}
     </AuthCard>
   )

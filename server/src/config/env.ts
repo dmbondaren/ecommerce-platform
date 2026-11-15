@@ -29,6 +29,8 @@ const schema = z.object({
   AUTO_VERIFY_EMAIL: flag,
   /** Adds demo users and listings at start-up when they are missing. */
   SEED_DEMO_DATA: flag,
+  /** Account that owns the demo listings instead of the demo users, e.g. the site owner's. */
+  DEMO_OWNER_EMAIL: optional(z.string().email()),
   // Payments are simulated: buyers get these transfer details and confirm the payment themselves.
   PAYMENT_RECIPIENT: z.string().default('Marketplace Escrow (demo)'),
   PAYMENT_IBAN: z.string().default('CH93 0076 2011 6238 5295 7'),

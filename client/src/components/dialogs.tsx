@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Button, Field, FormError, Modal, fieldErrors } from './ui'
+import { t } from '../app/i18n'
 
 interface ConfirmProps {
   title: string
@@ -34,7 +35,7 @@ export function ConfirmDialog({ title, children, confirmLabel, danger, onConfirm
         <FormError error={error} />
       </div>
       <footer className="modal-footer">
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>{t('Cancel')}</Button>
         <Button variant={danger ? 'danger' : 'primary'} busy={busy} onClick={() => void confirm()}>
           {confirmLabel}
         </Button>
@@ -104,7 +105,7 @@ export function ReasonDialog({
             )}
           </Field>
           {withDays && (
-            <Field label="Duration in days" hint="Leave empty for a permanent suspension." errors={errors.days}>
+            <Field label={t('Duration in days')} hint={t('Leave empty for a permanent suspension.')} errors={errors.days}>
               {(props) => (
                 <input
                   {...props}
@@ -120,7 +121,7 @@ export function ReasonDialog({
           {Object.keys(errors).length === 0 && <FormError error={error} />}
         </div>
         <footer className="modal-footer">
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t('Cancel')}</Button>
           <Button type="submit" variant={danger ? 'danger' : 'primary'} busy={busy}>
             {confirmLabel}
           </Button>

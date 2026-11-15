@@ -12,6 +12,7 @@ import { ListingDetail } from './pages/ListingDetail'
 import { ListingEditor } from './pages/ListingEditor'
 import { Messages } from './pages/Messages'
 import { UserProfile } from './pages/UserProfile'
+import { t } from './app/i18n'
 
 // Most visitors never open the admin area, so it is loaded on demand.
 const Admin = lazy(() => import('./pages/admin/Admin'))
@@ -23,14 +24,14 @@ function RequireAuth({ children, staff = false }: { children: ReactNode; staff?:
   if (user === null) {
     return <Navigate to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} replace />
   }
-  if (staff && !isStaff) return <EmptyState title="This area is for staff only" />
+  if (staff && !isStaff) return <EmptyState title={t('This area is for staff only')} />
   return <>{children}</>
 }
 
 const NotFound = () => (
-  <EmptyState title="Page not found">
+  <EmptyState title={t('Page not found')}>
     <p>
-      The address may be mistyped, or the page has moved. <a href="/">Back to the listings</a>
+      {t('The address may be mistyped, or the page has moved.')} <a href="/">{t('Back to the listings')}</a>
     </p>
   </EmptyState>
 )

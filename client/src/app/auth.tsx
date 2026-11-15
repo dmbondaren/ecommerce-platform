@@ -4,6 +4,7 @@ import { authApi } from '../api/endpoints'
 import type { Account, Session } from '../api/types'
 import { queryClient } from './queryClient'
 import { toast } from './toast'
+import { t } from './i18n'
 
 interface AuthState {
   /** `undefined` while the saved session is being restored. */
@@ -34,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
     setSessionLostHandler(() => {
       applySession(null)
-      toast.info('Your session has ended. Please sign in again.')
+      toast.info(t('Your session has ended. Please sign in again.'))
     })
     return () => {
       cancelled = true
@@ -63,6 +64,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth(): AuthState {
   const context = useContext(AuthContext)
-  if (!context) throw new Error('useAuth must be used inside <AuthProvider>')
+  if (!context) throw new Error(t('useAuth must be used inside <AuthProvider>'))
   return context
 }

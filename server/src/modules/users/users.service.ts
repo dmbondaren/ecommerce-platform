@@ -23,6 +23,41 @@ export const accountPatchSchema = z.object({
 
 export type AccountPatch = z.infer<typeof accountPatchSchema>
 
+const dealSelect = {
+  titleSnapshot: true,
+  price: true,
+  currency: true,
+  categorySnapshot: true,
+  paidAt: true,
+  createdAt: true,
+} as const
+
+interface DealRow {
+  titleSnapshot: string
+  price: { toNumber(): number }
+  currency: string
+  categorySnapshot: string
+  paidAt: Date | null
+  createdAt: Date
+}
+
+const toDeal = (order: DealRow) => ({
+  title: order.titleSnapshot,
+  price: order.price.toNumber(),
+  currency: order.currency,
+  category: order.categorySnapshot,
+  date: order.paidAt ?? order.createdAt,
+})
+
+/** [{ name, count }] by descending count; ties in alphabetical order so the result is stable. */
+export function countByName(names: string[]): { name: string; count: number }[] {
+  const counts = new Map<string, number>()
+  for (const name of names) counts.set(name, (counts.get(name) ?? 0) + 1)
+  return [...counts]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+}
+
 export const userService = {
   async account(userId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } })
@@ -53,6 +88,29 @@ export const userService = {
         },
       }),
     )
+  },
+
+  /** Completed deals and category breakdowns for the charts on a public profile. */
+  async activity(id: string) {
+    const user = await prisma.user.findUnique({ where: { id }, select: { id: true } })
+    if (!user) throw notFound('User')
+    const recent = { select: dealSelect, orderBy: { createdAt: 'desc' as const }, take: 50 }
+    const [sales, purchases, listings] = await Promise.all([
+      prisma.order.findMany({ where: { sellerId: id, status: 'PAID' }, ...recent }),
+      prisma.order.findMany({ where: { buyerId: id, status: 'PAID' }, ...recent }),
+      prisma.listing.findMany({
+        where: { ownerId: id, status: { in: ['ACTIVE', 'RESERVED', 'SOLD'] } },
+        select: { category: { select: { name: true } } },
+      }),
+    ])
+    return {
+      // Oldest first, the order a chart is read in.
+      sales: sales.map(toDeal).reverse(),
+      purchases: purchases.map(toDeal).reverse(),
+      listingCategories: countByName(listings.map((listing) => listing.category.name)),
+      saleCategories: countByName(sales.map((order) => order.categorySnapshot)),
+      purchaseCategories: countByName(purchases.map((order) => order.categorySnapshot)),
+    }
   },
 
   async publicProfile(id: string) {

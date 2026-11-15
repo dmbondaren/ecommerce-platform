@@ -3,6 +3,7 @@ import { errorMessage } from '../api/client'
 import { uploadImages } from '../api/endpoints'
 import { toast } from '../app/toast'
 import { Icon } from './Icon'
+import { t } from '../app/i18n'
 
 const MAX_BYTES = 10 * 1024 * 1024
 const ACCEPT = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
@@ -32,7 +33,7 @@ export function ImagePicker({ urls, max, onChange }: Props) {
     const room = max - urls.length
     const files = Array.from(list ?? []).filter((file) => ACCEPT.includes(file.type))
     if (files.length === 0) {
-      if (list && list.length > 0) toast.error('Only JPEG, PNG, WebP and GIF images can be added')
+      if (list && list.length > 0) toast.error(t('Only JPEG, PNG, WebP and GIF images can be added'))
       return
     }
     if (room <= 0) {
@@ -117,7 +118,7 @@ export function ImagePicker({ urls, max, onChange }: Props) {
           onDragEnd={endDrag}
         >
           <img src={url} alt={`Photo ${index + 1}`} draggable={false} />
-          {index === 0 && <figcaption className="badge badge-overlay">Cover</figcaption>}
+          {index === 0 && <figcaption className="badge badge-overlay">{t('Cover')}</figcaption>}
           <div className="image-tools">
             {index > 0 && (
               <button type="button" onClick={() => swap(index, index - 1)} aria-label={`Move photo ${index + 1} earlier`}>
@@ -142,7 +143,7 @@ export function ImagePicker({ urls, max, onChange }: Props) {
       {urls.length < max && (
         <button type="button" className="image-add" disabled={busy} onClick={() => input.current?.click()}>
           {busy ? <span className="spinner spinner-sm" /> : <Icon name="plus" />}
-          <span>{busy ? 'Uploading…' : 'Add or drop photos'}</span>
+          <span>{busy ? t('Uploading…') : t('Add or drop photos')}</span>
         </button>
       )}
       <input

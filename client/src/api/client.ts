@@ -1,4 +1,5 @@
 import type { Session } from './types'
+import { t } from '../app/i18n'
 
 const BASE = '/api/v1'
 
@@ -19,7 +20,7 @@ export class ApiError extends Error {
 }
 
 export const errorMessage = (error: unknown) =>
-  error instanceof Error ? error.message : 'Something went wrong. Please try again.'
+  error instanceof Error ? error.message : t('Something went wrong. Please try again.')
 
 // The access token lives in memory only: it is short-lived and a script
 // injected into the page could read anything kept in localStorage. The
@@ -93,7 +94,7 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
       credentials: 'include',
     })
   } catch {
-    throw new ApiError(0, 'NETWORK', 'Cannot reach the server. Check your connection and try again.')
+    throw new ApiError(0, 'NETWORK', t('Cannot reach the server. Check your connection and try again.'))
   }
 }
 

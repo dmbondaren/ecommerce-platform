@@ -9,6 +9,7 @@ import { HomeAddressPrompt } from '../components/HomeAddress'
 import { Icon } from '../components/Icon'
 import { ListingGrid } from '../components/ListingCard'
 import { Button, EmptyState, ErrorState, Pagination } from '../components/ui'
+import { t } from '../app/i18n'
 
 const SORTS = [
   ['newest', 'Newest first'],
@@ -37,15 +38,15 @@ function NearbyFilter({ radius, onChange }: { radius: string; onChange: (radius:
       <button
         type="button"
         className={active ? 'nearby-btn active' : 'nearby-btn'}
-        title={hasHome ? `Searching around ${user?.homeAddress || 'your address'}. Click to change it.` : undefined}
+        title={hasHome ? t('Searching around {address}. Click to change it.', { address: user?.homeAddress ?? '' }) : undefined}
         // With an address on file the button opens it for editing; without one it offers to add it.
         onClick={() => requireLogin(() => setAsking(true))}
       >
         <Icon name="pin" size={18} />
-        {active ? `Within ${radius} km` : 'Near me'}
+        {active ? t('Within {km} km', { km: radius }) : t('Near me')}
       </button>
       {hasHome && (
-        <div className="chips nearby-options" role="group" aria-label="Distance from your address">
+        <div className="chips nearby-options" role="group" aria-label={t('Distance from your address')}>
           {RADII.map((km) => (
             <button
               key={km}
@@ -54,12 +55,12 @@ function NearbyFilter({ radius, onChange }: { radius: string; onChange: (radius:
               aria-pressed={radius === String(km)}
               onClick={() => onChange(String(km))}
             >
-              {km} km
+              {km} {t('km')}
             </button>
           ))}
           {active && (
             <button type="button" className="chip" onClick={() => onChange('')}>
-              Everywhere
+              {t('Everywhere')}
             </button>
           )}
         </div>
@@ -90,8 +91,8 @@ function PriceFilter({ min, max, onApply }: { min: string; max: string; onApply:
         type="number"
         min={0}
         inputMode="decimal"
-        placeholder="Min"
-        aria-label="Minimum price"
+        placeholder={t('Min')}
+        aria-label={t('Minimum price')}
         value={draft.min}
         onChange={(event) => setDraft({ ...draft, min: event.target.value })}
       />
@@ -100,13 +101,13 @@ function PriceFilter({ min, max, onApply }: { min: string; max: string; onApply:
         type="number"
         min={0}
         inputMode="decimal"
-        placeholder="Max"
-        aria-label="Maximum price"
+        placeholder={t('Max')}
+        aria-label={t('Maximum price')}
         value={draft.max}
         onChange={(event) => setDraft({ ...draft, max: event.target.value })}
       />
       <Button type="submit" size="sm">
-        Apply
+        {t('Apply')}
       </Button>
     </form>
   )
@@ -155,18 +156,18 @@ export function Catalog() {
   return (
     <>
       <section className="hero">
-        <h1>{filters.q ? `Results for “${filters.q}”` : 'Find it second-hand, close to home'}</h1>
+        <h1>{filters.q ? t('Results for “{query}”', { query: filters.q }) : t('Find it second-hand, close to home')}</h1>
         <NearbyFilter radius={user?.homeCoordinates ? filters.radius : ''} onChange={(radius) => update({ radius })} />
       </section>
 
-      <div className="chips" role="group" aria-label="Category">
+      <div className="chips" role="group" aria-label={t('Category')}>
         <button
           type="button"
           className={filters.category ? 'chip' : 'chip active'}
           aria-pressed={!filters.category}
           onClick={() => update({ category: '' })}
         >
-          All
+          {t('All')}
         </button>
         {categories.data?.map((category) => (
           <button
@@ -176,7 +177,7 @@ export function Catalog() {
             aria-pressed={filters.category === category.slug}
             onClick={() => update({ category: category.slug })}
           >
-            {category.name}
+            {t(category.name)}
           </button>
         ))}
       </div>
@@ -189,11 +190,11 @@ export function Catalog() {
           onApply={(minPrice, maxPrice) => update({ minPrice, maxPrice })}
         />
         <select
-          aria-label="Currency"
+          aria-label={t('Currency')}
           value={filters.currency}
           onChange={(event) => update({ currency: event.target.value })}
         >
-          <option value="">Any currency</option>
+          <option value="">{t('Any currency')}</option>
           {CURRENCIES.map((currency) => (
             <option key={currency}>{currency}</option>
           ))}
@@ -201,13 +202,13 @@ export function Catalog() {
         <div className="toolbar-end">
           {results.data && (
             <span className="muted" aria-live="polite">
-              {results.data.total} {results.data.total === 1 ? 'listing' : 'listings'}
+              {t('{count} listings', { count: results.data.total })}
             </span>
           )}
-          <select aria-label="Sort by" value={filters.sort} onChange={(event) => update({ sort: event.target.value })}>
+          <select aria-label={t('Sort by')} value={filters.sort} onChange={(event) => update({ sort: event.target.value })}>
             {SORTS.map(([value, label]) => (
               <option key={value} value={value}>
-                {label}
+                {t(label)}
               </option>
             ))}
           </select>
@@ -225,11 +226,11 @@ export function Catalog() {
           <ErrorState error={results.error} onRetry={() => void results.refetch()} />
         )
       ) : results.data.items.length === 0 ? (
-        <EmptyState title="Nothing matches yet">
+        <EmptyState title={t('Nothing matches yet')}>
           {hasFilters ? (
-            <Button onClick={() => setParams({})}>Clear all filters</Button>
+            <Button onClick={() => setParams({})}>{t('Clear all filters')}</Button>
           ) : (
-            <p>Be the first to list something.</p>
+            <p>{t('Be the first to list something.')}</p>
           )}
         </EmptyState>
       ) : (

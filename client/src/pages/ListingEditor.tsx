@@ -10,6 +10,7 @@ import { toast } from '../app/toast'
 import { ImagePicker } from '../components/ImagePicker'
 import { LocationPicker } from '../components/LocationPicker'
 import { Button, EmptyState, Field, FormError, PageHeader, QueryView, fieldErrors } from '../components/ui'
+import { t } from '../app/i18n'
 
 const CURRENCIES: Currency[] = ['CHF', 'EUR', 'USD', 'UAH']
 
@@ -67,17 +68,17 @@ function EditorForm({ listing }: { listing?: Listing }) {
     <form className="form card" onSubmit={(event) => void submit(event)}>
       {Object.keys(errors).length > 0 ? (
         <p className="form-error" role="alert">
-          Please check the highlighted fields.
+          {t('Please check the highlighted fields.')}
         </p>
       ) : (
         <FormError error={error} />
       )}
 
-      <Field label="Photos" errors={errors.imageUrls} hint="Up to 10 photos, 10 MB each. The first one is the cover.">
+      <Field label={t('Photos')} errors={errors.imageUrls} hint={t('Up to 10 photos, 10 MB each. The first one is the cover.')}>
         {() => <ImagePicker urls={form.imageUrls} max={10} onChange={(urls) => set('imageUrls', urls)} />}
       </Field>
 
-      <Field label="Title" errors={errors.title}>
+      <Field label={t('Title')} errors={errors.title}>
         {(props) => (
           <input
             {...props}
@@ -90,15 +91,15 @@ function EditorForm({ listing }: { listing?: Listing }) {
         )}
       </Field>
 
-      <Field label="Category" errors={errors.categoryId}>
+      <Field label={t('Category')} errors={errors.categoryId}>
         {(props) => (
           <select {...props} required value={form.categoryId} onChange={(event) => set('categoryId', event.target.value)}>
             <option value="" disabled>
-              Choose a category
+              {t('Choose a category')}
             </option>
             {categories.data?.map((category) => (
               <option key={category.id} value={category.id}>
-                {category.name}
+                {t(category.name)}
               </option>
             ))}
           </select>
@@ -106,7 +107,7 @@ function EditorForm({ listing }: { listing?: Listing }) {
       </Field>
 
       <div className="form-row">
-        <Field label="Price" errors={errors.price} hint="Enter 0 to give it away.">
+        <Field label={t('Price')} errors={errors.price} hint={t('Enter 0 to give it away.')}>
           {(props) => (
             <input
               {...props}
@@ -120,7 +121,7 @@ function EditorForm({ listing }: { listing?: Listing }) {
             />
           )}
         </Field>
-        <Field label="Currency" errors={errors.currency}>
+        <Field label={t('Currency')} errors={errors.currency}>
           {(props) => (
             <select {...props} value={form.currency} onChange={(event) => set('currency', event.target.value as Currency)}>
               {CURRENCIES.map((currency) => (
@@ -131,7 +132,7 @@ function EditorForm({ listing }: { listing?: Listing }) {
         </Field>
       </div>
 
-      <Field label="Description" errors={errors.description} hint="Condition, age, what is included, why you are selling.">
+      <Field label={t('Description')} errors={errors.description} hint={t('Condition, age, what is included, why you are selling.')}>
         {(props) => (
           <textarea
             {...props}
@@ -146,12 +147,12 @@ function EditorForm({ listing }: { listing?: Listing }) {
       </Field>
 
       <div className="form-row">
-        <Field label="Location (optional)" errors={errors.location}>
+        <Field label={t('Location (optional)')} errors={errors.location}>
           {(props) => (
-            <input {...props} maxLength={120} placeholder="e.g. Zürich" value={form.location} onChange={(event) => set('location', event.target.value)} />
+            <input {...props} maxLength={120} placeholder={t('e.g. Zürich')} value={form.location} onChange={(event) => set('location', event.target.value)} />
           )}
         </Field>
-        <Field label="Phone (optional)" errors={errors.phone} hint="Shown to signed-in users only.">
+        <Field label={t('Phone (optional)')} errors={errors.phone} hint={t('Shown to signed-in users only.')}>
           {(props) => (
             <input {...props} type="tel" maxLength={40} placeholder="+41 44 123 45 67" value={form.phone} onChange={(event) => set('phone', event.target.value)} />
           )}
@@ -168,9 +169,9 @@ function EditorForm({ listing }: { listing?: Listing }) {
 
       <div className="row">
         <Button type="submit" variant="primary" busy={busy}>
-          {listing ? 'Save changes' : 'Publish listing'}
+          {listing ? t('Save changes') : t('Publish listing')}
         </Button>
-        <Button onClick={() => navigate(-1)}>Cancel</Button>
+        <Button onClick={() => navigate(-1)}>{t('Cancel')}</Button>
       </div>
     </form>
   )
@@ -185,10 +186,10 @@ export function ListingEditor() {
   if (!id) {
     return (
       <div className="narrow">
-        <PageHeader title="Sell an item" />
+        <PageHeader title={t('Sell an item')} />
         {user && !user.isVerified ? (
-          <EmptyState title="Confirm your e-mail address first">
-            <p>We sent you a link when you registered. Listings can be published once it is confirmed.</p>
+          <EmptyState title={t('Confirm your e-mail address first')}>
+            <p>{t('We sent you a link when you registered. Listings can be published once it is confirmed.')}</p>
           </EmptyState>
         ) : (
           <EditorForm />
@@ -198,13 +199,13 @@ export function ListingEditor() {
   }
   return (
     <div className="narrow">
-      <PageHeader title="Edit listing" />
+      <PageHeader title={t('Edit listing')} />
       <QueryView query={existing}>
         {(listing) =>
           listing.owner.id === user?.id ? (
             <EditorForm key={listing.id} listing={listing} />
           ) : (
-            <EmptyState title="You can only edit your own listings" />
+            <EmptyState title={t('You can only edit your own listings')} />
           )
         }
       </QueryView>

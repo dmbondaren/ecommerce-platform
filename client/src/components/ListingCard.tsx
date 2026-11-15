@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import type { Listing } from '../api/types'
 import { formatPrice, STATUS_LABELS, timeAgo } from '../lib/format'
 import { Icon } from './Icon'
+import { t } from '../app/i18n'
 
 interface Props {
   listing: Listing
@@ -12,7 +13,7 @@ interface Props {
 export function ListingImage({ src, alt }: { src: string | undefined | null; alt: string }) {
   if (!src) {
     return (
-      <div className="image-placeholder" role="img" aria-label="No photo">
+      <div className="image-placeholder" role="img" aria-label={t('No photo')}>
         <Icon name="image" size={32} />
       </div>
     )
@@ -25,7 +26,7 @@ export function ListingCard({ listing, favorite = false, onToggleFavorite }: Pro
     <article className={listing.status === 'ACTIVE' ? 'card listing-card' : 'card listing-card dimmed'}>
       <Link to={`/listings/${listing.id}`} className="listing-card-media" tabIndex={-1} aria-hidden="true">
         <ListingImage src={listing.imageUrls[0]} alt="" />
-        {listing.status !== 'ACTIVE' && <span className="badge badge-overlay">{STATUS_LABELS[listing.status]}</span>}
+        {listing.status !== 'ACTIVE' && <span className="badge badge-overlay">{t(STATUS_LABELS[listing.status])}</span>}
       </Link>
       {onToggleFavorite && (
         <button
@@ -33,7 +34,7 @@ export function ListingCard({ listing, favorite = false, onToggleFavorite }: Pro
           className={favorite ? 'favorite-btn active' : 'favorite-btn'}
           onClick={() => onToggleFavorite(listing.id)}
           aria-pressed={favorite}
-          aria-label={favorite ? 'Remove from favourites' : 'Save to favourites'}
+          aria-label={favorite ? t('Remove from favourites') : t('Save to favourites')}
         >
           <Icon name="heart" size={18} filled={favorite} />
         </button>

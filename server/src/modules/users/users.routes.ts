@@ -20,6 +20,10 @@ usersRouter.get('/users/:id', async (req, res) => {
   res.json(await userService.publicProfile(param(req, 'id')))
 })
 
+usersRouter.get('/users/:id/activity', async (req, res) => {
+  res.json(await userService.activity(param(req, 'id')))
+})
+
 usersRouter.get('/users/:id/listings', async (req, res) => {
   res.json(await listingService.byOwner(param(req, 'id'), { onlyActive: true }))
 })

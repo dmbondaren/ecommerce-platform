@@ -1,6 +1,7 @@
 import { useRef, useState, type PointerEvent } from 'react'
 import { useTheme } from '../app/theme'
 import { Icon } from './Icon'
+import { t } from '../app/i18n'
 
 const TRACK = 60
 const KNOB = 26
@@ -55,7 +56,7 @@ export function ThemeSwitch() {
       role="switch"
       aria-checked={dark}
       aria-label={label}
-      title={dark ? 'Switch to the light theme' : 'Switch to the dark theme'}
+      title={dark ? t('Switch to the light theme') : t('Switch to the dark theme')}
       className={dragOffset === null ? 'theme-switch' : 'theme-switch dragging'}
       style={{ width: TRACK, height: KNOB + PADDING * 2 }}
       onPointerDown={onPointerDown}

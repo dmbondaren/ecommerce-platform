@@ -14,6 +14,7 @@ import { LazyMap } from '../components/LocationPicker'
 import { Button, QueryView, Spinner, UserLink } from '../components/ui'
 import { googleMapsUrl } from '../lib/address'
 import { formatDate, formatPrice, STATUS_LABELS } from '../lib/format'
+import { t } from '../app/i18n'
 
 function Gallery({ images, title }: { images: string[]; title: string }) {
   const [index, setIndex] = useState(0)
@@ -62,14 +63,14 @@ function Actions({ listing }: { listing: Listing }) {
   const relist = useMutation({
     mutationFn: () => listingApi.relist(listing.id),
     onSuccess: () => {
-      toast.success('Your listing is active again')
+      toast.success(t('Your listing is active again'))
       return refresh()
     },
   })
   const restore = useMutation({
     mutationFn: () => adminApi.activateListing(listing.id),
     onSuccess: () => {
-      toast.success('The listing is visible again')
+      toast.success(t('The listing is visible again'))
       return refresh()
     },
   })
@@ -81,17 +82,17 @@ function Actions({ listing }: { listing: Listing }) {
           {(listing.status === 'ACTIVE' || listing.status === 'DEACTIVATED' || listing.status === 'PENDING_REVIEW') && (
             <Link className="btn btn-primary btn-md" to={`/listings/${listing.id}/edit`}>
               <Icon name="edit" size={18} />
-              Edit listing
+              {t('Edit listing')}
             </Link>
           )}
           {listing.status === 'SOLD' && (
             <Button variant="primary" busy={relist.isPending} onClick={() => relist.mutate()}>
-              List again
+              {t('List again')}
             </Button>
           )}
           {listing.status !== 'RESERVED' && (
             <Button variant="danger" icon="trash" onClick={() => setDialog('delete')}>
-              Delete
+              {t('Delete')}
             </Button>
           )}
         </>
@@ -100,16 +101,16 @@ function Actions({ listing }: { listing: Listing }) {
           {listing.status === 'ACTIVE' && (
             <>
               <Button variant="primary" onClick={() => requireLogin(() => setDialog('buy'))}>
-                Buy now
+                {t('Buy now')}
               </Button>
               <Button icon="cart" busy={saved.cartBusy} onClick={() => saved.toggleCart(listing.id)}>
-                {saved.cartIds.has(listing.id) ? 'Remove from cart' : 'Add to cart'}
+                {saved.cartIds.has(listing.id) ? t('Remove from cart') : t('Add to cart')}
               </Button>
             </>
           )}
           {listing.status !== 'ARCHIVED' && (
             <Button icon="chat" busy={message.isPending} onClick={() => requireLogin(() => message.mutate())}>
-              {listing.status === 'RESERVED' ? 'Ask the seller' : 'Message seller'}
+              {listing.status === 'RESERVED' ? t('Ask the seller') : t('Message seller')}
             </Button>
           )}
           <div className="row">
@@ -120,10 +121,10 @@ function Actions({ listing }: { listing: Listing }) {
               aria-pressed={saved.favoriteIds.has(listing.id)}
               onClick={() => saved.toggleFavorite(listing.id)}
             >
-              {saved.favoriteIds.has(listing.id) ? 'Saved' : 'Save'}
+              {saved.favoriteIds.has(listing.id) ? t('Saved') : t('Save')}
             </Button>
             <Button variant="ghost" size="sm" icon="flag" onClick={() => requireLogin(() => setDialog('report'))}>
-              Report
+              {t('Report')}
             </Button>
           </div>
         </>
@@ -131,20 +132,20 @@ function Actions({ listing }: { listing: Listing }) {
 
       {isStaff && !isOwner && (
         <div className="staff-box">
-          <p className="eyebrow">Moderation</p>
+          <p className="eyebrow">{t('Moderation')}</p>
           <div className="row">
             {(listing.status === 'ACTIVE' || listing.status === 'PENDING_REVIEW') && (
               <Button size="sm" onClick={() => setDialog('takeDown')}>
-                Take down
+                {t('Take down')}
               </Button>
             )}
             {(listing.status === 'DEACTIVATED' || listing.status === 'PENDING_REVIEW') && (
               <Button size="sm" busy={restore.isPending} onClick={() => restore.mutate()}>
-                Approve
+                {t('Approve')}
               </Button>
             )}
             <Button size="sm" variant="danger" onClick={() => setDialog('remove')}>
-              Remove
+              {t('Remove')}
             </Button>
           </div>
         </div>
@@ -152,58 +153,56 @@ function Actions({ listing }: { listing: Listing }) {
 
       {dialog === 'buy' && (
         <ConfirmDialog
-          title="Reserve and pay"
-          confirmLabel={`Reserve for ${formatPrice(listing.price, listing.currency)}`}
+          title={t('Reserve and pay')}
+          confirmLabel={t('Reserve for {price}', { price: formatPrice(listing.price, listing.currency) })}
           onClose={() => setDialog(null)}
           onConfirm={async () => {
             await orderApi.checkout([listing.id])
             await client.invalidateQueries()
-            toast.success('Reserved for you. The payment details are in your e-mail and under “Purchases”.')
+            toast.success(t('Reserved for you. The payment details are in your e-mail and under “Purchases”.'))
             navigate('/account/purchases')
           }}
         >
           <p>
-            <strong>{listing.title}</strong> will be reserved for you for 15 minutes. You receive the transfer
-            details by e-mail, pay, and confirm with “I have paid”. Without a confirmation in time the item goes
-            back on sale.
+            <strong>{listing.title}</strong> {t('will be reserved for you for 15 minutes. You receive the transfer details by e-mail, pay, and confirm with “I have paid”. Without a confirmation in time the item goes back on sale.')}
           </p>
         </ConfirmDialog>
       )}
       {dialog === 'delete' && (
         <ConfirmDialog
-          title="Delete this listing?"
-          confirmLabel="Delete listing"
+          title={t('Delete this listing?')}
+          confirmLabel={t('Delete listing')}
           danger
           onClose={() => setDialog(null)}
           onConfirm={async () => {
             await listingApi.remove(listing.id)
             await refresh()
-            toast.success('Listing deleted')
+            toast.success(t('Listing deleted'))
             navigate('/account/listings')
           }}
         >
-          <p>“{listing.title}” will disappear from the marketplace. This cannot be undone.</p>
+          <p>“{listing.title}{t('” will disappear from the marketplace. This cannot be undone.')}</p>
         </ConfirmDialog>
       )}
       {dialog === 'report' && (
         <ReasonDialog
-          title="Report this listing"
-          label="What is wrong with it?"
-          hint="At least 10 characters. Our moderators read every report."
+          title={t('Report this listing')}
+          label={t('What is wrong with it?')}
+          hint={t('At least 10 characters. Our moderators read every report.')}
           minLength={10}
-          confirmLabel="Send report"
+          confirmLabel={t('Send report')}
           onClose={() => setDialog(null)}
           onSubmit={async (reason) => {
             await listingApi.report(listing.id, reason, [])
-            toast.success('Thank you. Our team will look into it.')
+            toast.success(t('Thank you. Our team will look into it.'))
           }}
         />
       )}
       {dialog === 'takeDown' && (
         <ReasonDialog
-          title="Take this listing down"
-          hint="The seller sees this reason and can edit the listing to have it reviewed again."
-          confirmLabel="Take down"
+          title={t('Take this listing down')}
+          hint={t('The seller sees this reason and can edit the listing to have it reviewed again.')}
+          confirmLabel={t('Take down')}
           onClose={() => setDialog(null)}
           onSubmit={async (reason) => {
             await adminApi.deactivateListing(listing.id, reason)
@@ -213,9 +212,9 @@ function Actions({ listing }: { listing: Listing }) {
       )}
       {dialog === 'remove' && (
         <ReasonDialog
-          title="Remove this listing permanently"
-          hint="The seller is told why. This cannot be undone."
-          confirmLabel="Remove listing"
+          title={t('Remove this listing permanently')}
+          hint={t('The seller is told why. This cannot be undone.')}
+          confirmLabel={t('Remove listing')}
           danger
           onClose={() => setDialog(null)}
           onSubmit={async (reason) => {
@@ -254,14 +253,14 @@ export function ListingDetail() {
                 className={listing.status === 'SOLD' || listing.status === 'RESERVED' ? 'notice' : 'notice notice-warn'}
                 role="status"
               >
-                <strong>{STATUS_LABELS[listing.status]}</strong>
+                <strong>{t(STATUS_LABELS[listing.status])}</strong>
                 {listing.status === 'RESERVED' && (
-                  <span> — a buyer is completing the payment. You can still ask the seller about it.</span>
+                  <span> {t('— a buyer is completing the payment. You can still ask the seller about it.')}</span>
                 )}
                 {listing.moderationReason && <span> — {listing.moderationReason}</span>}
               </div>
             )}
-            <p className="eyebrow">{listing.category.name}</p>
+            <p className="eyebrow">{t(listing.category.name)}</p>
             <h1>{listing.title}</h1>
             <p className="price price-lg">{formatPrice(listing.price, listing.currency)}</p>
             <p className="meta">
@@ -270,16 +269,16 @@ export function ListingDetail() {
                   <Icon name="pin" size={16} /> {listing.location}
                 </span>
               )}
-              <span>Listed {formatDate(listing.createdAt)}</span>
+              <span>{t('Listed')} {formatDate(listing.createdAt)}</span>
               <span>
                 <Icon name="eye" size={16} /> {listing.viewCount}
               </span>
             </p>
             <Actions listing={listing} />
             <div className="card seller-card">
-              <p className="eyebrow">Seller</p>
+              <p className="eyebrow">{t('Seller')}</p>
               <UserLink user={listing.owner} />
-              <p className="muted">Member since {formatDate(listing.owner.memberSince)}</p>
+              <p className="muted">{t('Member since')} {formatDate(listing.owner.memberSince)}</p>
               {listing.phone && user && (
                 <a className="link" href={`tel:${listing.phone}`}>
                   {listing.phone}
@@ -288,13 +287,13 @@ export function ListingDetail() {
             </div>
           </div>
           <section className="detail-description">
-            <h2>Description</h2>
+            <h2>{t('Description')}</h2>
             <p className="prose">{listing.description}</p>
             {listing.coordinates && (
               <>
-                <h2>Where to find it</h2>
+                <h2>{t('Where to find it')}</h2>
                 {listing.location && <p className="muted">{listing.location}</p>}
-                <Suspense fallback={<Spinner label="Loading the map" />}>
+                <Suspense fallback={<Spinner label={t('Loading the map')} />}>
                   <LazyMap position={listing.coordinates} />
                 </Suspense>
               </>
@@ -302,7 +301,7 @@ export function ListingDetail() {
             {mapsUrl(listing) && (
               <a className="btn btn-secondary btn-md map-link" href={mapsUrl(listing) ?? undefined} target="_blank" rel="noreferrer">
                 <Icon name="pin" size={18} />
-                Open in Google Maps
+                {t('Open in Google Maps')}
               </a>
             )}
           </section>

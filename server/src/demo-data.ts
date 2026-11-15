@@ -1,4 +1,5 @@
 import { ensureCategories } from './bootstrap'
+import { env } from './config/env'
 import { logger } from './lib/logger'
 import { prisma } from './lib/prisma'
 import { hashPassword } from './modules/auth/auth.service'
@@ -36,14 +37,37 @@ export async function seedDemoData() {
     })
   }
 
+  const demoUsers = await prisma.user.findMany({
+    where: { email: { in: USERS.map((user) => user.email) } },
+    select: { id: true, nickname: true },
+  })
+  // With DEMO_OWNER_EMAIL the listings belong to that account, so the site
+  // owner can manage them and their profile shows them.
+  const realOwner = env.DEMO_OWNER_EMAIL
+    ? await prisma.user.findUnique({ where: { email: env.DEMO_OWNER_EMAIL.toLowerCase() }, select: { id: true } })
+    : null
+  if (env.DEMO_OWNER_EMAIL && !realOwner) {
+    logger.warn({ email: env.DEMO_OWNER_EMAIL }, 'DEMO_OWNER_EMAIL has no account yet; register it and restart')
+  }
+  const demoUserIds = demoUsers.map((user) => user.id)
+  if (realOwner) {
+    await prisma.listing.updateMany({ where: { ownerId: { in: demoUserIds } }, data: { ownerId: realOwner.id } })
+  }
+  const knownOwners = realOwner ? [...demoUserIds, realOwner.id] : demoUserIds
+
   for (const { owner, category, ...listing } of LISTINGS) {
-    const exists = await prisma.listing.findFirst({ where: { title: listing.title, owner: { nickname: owner } } })
+    const exists = await prisma.listing.findFirst({
+      where: { title: listing.title, ownerId: { in: knownOwners } },
+      select: { id: true },
+    })
     if (exists) continue
+    const ownerId = realOwner?.id ?? demoUsers.find((user) => user.nickname === owner)?.id
+    if (!ownerId) continue
     await prisma.listing.create({
       data: {
         ...listing,
         currency: 'CHF',
-        owner: { connect: { nickname: owner } },
+        owner: { connect: { id: ownerId } },
         category: { connect: { slug: category } },
       },
     })

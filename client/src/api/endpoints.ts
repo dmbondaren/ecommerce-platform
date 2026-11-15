@@ -16,6 +16,7 @@ import type {
   Order,
   Page,
   Profile,
+  ProfileActivity,
   Purchase,
   Report,
   Review,
@@ -108,6 +109,7 @@ export const orderApi = {
 
 export const userApi = {
   profile: (id: string) => api<Profile>(`/users/${id}`),
+  activity: (id: string) => api<ProfileActivity>(`/users/${id}/activity`),
   listings: (id: string) => api<Listing[]>(`/users/${id}/listings`),
   reviews: (id: string) => api<Review[]>(`/users/${id}/reviews`),
   vote: (reviewId: string, type: VoteType | null) => post<VoteSummary>(`/reviews/${reviewId}/vote`, { type }),

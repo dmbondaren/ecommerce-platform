@@ -4,6 +4,7 @@ import { ApiError, errorMessage } from '../api/client'
 import type { PublicUser } from '../api/types'
 import { pageWindow } from '../lib/format'
 import { Icon, type IconName } from './Icon'
+import { t } from '../app/i18n'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
@@ -47,9 +48,9 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
   const notFound = error instanceof ApiError && error.status === 404
   return (
     <div className="state" role="alert">
-      <h3>{notFound ? 'Not found' : 'This could not be loaded'}</h3>
-      <p className="muted">{notFound ? 'It may have been removed, or the link is wrong.' : errorMessage(error)}</p>
-      {onRetry && !notFound && <Button onClick={onRetry}>Try again</Button>}
+      <h3>{notFound ? t('Not found') : t('This could not be loaded')}</h3>
+      <p className="muted">{notFound ? t('It may have been removed, or the link is wrong.') : errorMessage(error)}</p>
+      {onRetry && !notFound && <Button onClick={onRetry}>{t('Try again')}</Button>}
     </div>
   )
 }
@@ -145,7 +146,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
       <div className="modal" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} ref={ref}>
         <header className="modal-header">
           <h2>{title}</h2>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
+          <button type="button" className="icon-btn" onClick={onClose} aria-label={t('Close')}>
             <Icon name="x" />
           </button>
         </header>
@@ -166,13 +167,13 @@ export function Avatar({ user, size = 36 }: { user: Pick<PublicUser, 'nickname' 
 }
 
 export function UserLink({ user }: { user: PublicUser | null }) {
-  if (!user) return <span className="muted">Deleted account</span>
+  if (!user) return <span className="muted">{t('Deleted account')}</span>
   return (
     <Link to={`/users/${user.id}`} className="user-link">
       <Avatar user={user} size={24} />
       {user.nickname}
       {user.isStaff ? (
-        <span className="badge badge-accent">Staff</span>
+        <span className="badge badge-accent">{t('Staff')}</span>
       ) : (
         user.isVerified && <Icon name="check" size={14} className="verified" />
       )}
@@ -192,7 +193,7 @@ export function Stars({ value, onChange }: { value: number; onChange?: (value: n
     )
   }
   return (
-    <span className="stars stars-input" role="radiogroup" aria-label="Rating">
+    <span className="stars stars-input" role="radiogroup" aria-label={t('Rating')}>
       {stars.map((star) => (
         <button
           key={star}
@@ -212,8 +213,8 @@ export function Stars({ value, onChange }: { value: number; onChange?: (value: n
 export function Pagination({ page, totalPages, onChange }: { page: number; totalPages: number; onChange: (page: number) => void }) {
   if (totalPages <= 1) return null
   return (
-    <nav className="pagination" aria-label="Pages">
-      <button type="button" className="icon-btn" disabled={page <= 1} onClick={() => onChange(page - 1)} aria-label="Previous page">
+    <nav className="pagination" aria-label={t('Pages')}>
+      <button type="button" className="icon-btn" disabled={page <= 1} onClick={() => onChange(page - 1)} aria-label={t('Previous page')}>
         <Icon name="left" />
       </button>
       {pageWindow(page, totalPages).map((item, index) =>
@@ -233,7 +234,7 @@ export function Pagination({ page, totalPages, onChange }: { page: number; total
           </button>
         ),
       )}
-      <button type="button" className="icon-btn" disabled={page >= totalPages} onClick={() => onChange(page + 1)} aria-label="Next page">
+      <button type="button" className="icon-btn" disabled={page >= totalPages} onClick={() => onChange(page + 1)} aria-label={t('Next page')}>
         <Icon name="right" />
       </button>
     </nav>

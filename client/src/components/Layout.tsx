@@ -9,9 +9,11 @@ import { useRealtime } from '../app/realtime'
 import { toast } from '../app/toast'
 import { ErrorBoundary } from './ErrorBoundary'
 import { Icon, type IconName } from './Icon'
+import { LanguageSwitch } from './LanguageSwitch'
 import { PaymentBanner } from './PaymentBanner'
 import { ThemeSwitch } from './ThemeSwitch'
 import { Avatar, Button } from './ui'
+import { t } from '../app/i18n'
 
 function HeaderLink({ to, icon, label, count = 0 }: { to: string; icon: IconName; label: string; count?: number }) {
   return (
@@ -45,8 +47,8 @@ function SearchBox() {
       <Icon name="search" size={18} />
       <input
         type="search"
-        placeholder="Search listings"
-        aria-label="Search listings"
+        placeholder={t('Search listings')}
+        aria-label={t('Search listings')}
         maxLength={100}
         value={value}
         onChange={(event) => setDraft({ source: current, value: event.target.value })}
@@ -62,17 +64,17 @@ function VerifyBanner() {
       await authApi.resendVerification()
       setSent(true)
     } catch {
-      toast.error('The e-mail could not be sent. Please try again later.')
+      toast.error(t('The e-mail could not be sent. Please try again later.'))
     }
   }
   return (
     <div className="banner" role="status">
-      <span>Confirm your e-mail address to publish listings. Check your inbox for the link.</span>
+      <span>{t('Confirm your e-mail address to publish listings. Check your inbox for the link.')}</span>
       {sent ? (
-        <span className="muted">Sent.</span>
+        <span className="muted">{t('Sent.')}</span>
       ) : (
         <button type="button" className="link" onClick={() => void resend()}>
-          Send it again
+          {t('Send it again')}
         </button>
       )}
     </div>
@@ -92,45 +94,46 @@ export function Layout() {
   return (
     <>
       <a className="skip-link" href="#main">
-        Skip to content
+        {t('Skip to content')}
       </a>
       <header className="site-header">
         <div className="container header-inner">
-          <Link to="/" className="brand" aria-label="Marketplace, start page">
+          <Link to="/" className="brand" aria-label={t('Marketplace, start page')}>
             <span className="brand-mark" aria-hidden="true">
               M
             </span>
-            <span className="brand-name">Marketplace</span>
+            <span className="brand-name">{t('Marketplace')}</span>
           </Link>
           <SearchBox />
-          <nav className="header-nav" aria-label="Main">
+          <nav className="header-nav" aria-label={t('Main')}>
+            <LanguageSwitch />
             <ThemeSwitch />
             {user ? (
               <>
-                {isStaff && <HeaderLink to="/admin" icon="shield" label="Administration" />}
-                <HeaderLink to="/account/favorites" icon="heart" label="Favourites" />
-                <HeaderLink to="/cart" icon="cart" label="Cart" count={cartCount} />
-                <HeaderLink to="/messages" icon="chat" label="Messages" count={unread.data?.count} />
+                {isStaff && <HeaderLink to="/admin" icon="shield" label={t('Administration')} />}
+                <HeaderLink to="/account/favorites" icon="heart" label={t('Favourites')} />
+                <HeaderLink to="/cart" icon="cart" label={t('Cart')} count={cartCount} />
+                <HeaderLink to="/messages" icon="chat" label={t('Messages')} count={unread.data?.count} />
                 <HeaderLink
                   to="/account/notifications"
                   icon="bell"
-                  label="Notifications"
+                  label={t('Notifications')}
                   count={notifications.data?.unreadCount}
                 />
-                <NavLink to="/account" className="header-link" aria-label="My account" title="My account">
+                <NavLink to="/account" className="header-link" aria-label={t('My account')} title={t('My account')}>
                   <Avatar user={user} size={30} />
                 </NavLink>
               </>
             ) : (
               user === null && (
                 <Link to="/login" className="btn btn-ghost btn-md">
-                  Sign in
+                  {t('Sign in')}
                 </Link>
               )
             )}
             <Link to="/sell" className="btn btn-primary btn-md">
               <Icon name="plus" size={18} />
-              Sell
+              {t('Sell')}
             </Link>
           </nav>
         </div>
@@ -144,7 +147,7 @@ export function Layout() {
       </main>
       <footer className="site-footer">
         <div className="container footer-inner">
-          <span>© {new Date().getFullYear()} Marketplace · a portfolio project by Dmytro Bondarenko</span>
+          <span>© {new Date().getFullYear()} {t('Marketplace · a portfolio project by Dmytro Bondarenko')}</span>
           <SupportLink />
         </div>
       </footer>
@@ -163,14 +166,14 @@ function SupportLink() {
       const conversation = await chatApi.openSupport()
       navigate(`/messages/${conversation.id}`)
     } catch {
-      toast.error('The support chat could not be opened. Please try again.')
+      toast.error(t('The support chat could not be opened. Please try again.'))
     } finally {
       setBusy(false)
     }
   }
   return (
     <Button variant="ghost" size="sm" busy={busy} onClick={() => void open()}>
-      Contact support
+      {t('Contact support')}
     </Button>
   )
 }
