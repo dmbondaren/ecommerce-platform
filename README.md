@@ -1,34 +1,43 @@
 # Marketplace
 
-A peer-to-peer marketplace for second-hand goods: people publish listings, talk to each other in real time, buy, and review the seller afterwards. Moderators keep the place clean.
+A peer-to-peer marketplace for second-hand goods: people publish listings, talk to each other in real time, reserve and pay, and review the seller afterwards. Moderators keep the place clean.
 
-It started as my bachelor's thesis (Express + Sequelize + MySQL, one 1 000-line React component) and was rewritten from the ground up as a typed, tested, containerised application.
+**Live demo: [marketplace-x86s.onrender.com](https://marketplace-x86s.onrender.com)**
+It runs on a free hosting plan, so the first page after a pause takes about a minute to load. To look around without registering, sign in as `anna@example.com` with the password `demo-password-123`.
 
-[![CI](https://github.com/dmbondaren/ecommerce-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/dmbondaren/ecommerce-platform/actions/workflows/ci.yml)
+The project started as my bachelor's thesis (Express, Sequelize, MySQL and one 1 000-line React component) and was rewritten from the ground up as a typed, tested, containerised application.
 
 ## Features
 
-**Buying and selling**
+**Catalogue**
 - Listings with up to ten photos, categories, price in CHF / EUR / USD / UAH
 - Search with filters (category, price), sorting and pagination; the state lives in the URL, so a search can be shared
 - “Near me”: listings within 1–20 km of the user's home address, which is optional and never shown to others
+- Optional map position per listing (Leaflet and OpenStreetMap), found from the address or placed by hand
 - Prices can be shown in one currency of the visitor's choice, converted with daily exchange rates (cached on the server, with a fallback when the provider is unavailable)
 - Favourites, cart, browsing history, notifications when a saved item gets cheaper
-- Public profiles with statistics: sales and purchases over time, and category breakdowns
-- Interface in English, German, Ukrainian and Russian, switchable in the header
+- Interface in English, German, Ukrainian and Russian; light and dark theme
+
+**Buying**
 - Checkout that reserves an item for exactly one buyer, even when two people buy at the same moment
 - Simulated payment in the style of a peer-to-peer trade: transfer details by e-mail, a 15-minute countdown, an “I have paid” confirmation, and automatic release of unpaid reservations
-- Optional map position per listing (Leaflet and OpenStreetMap), found from the address or placed by hand
-- Sales analytics for sellers: revenue, average sale and a six-month chart
-- A sold item can be offered again: the form opens pre-filled, to be checked and published as a new listing
+- A receipt by e-mail after payment, with the item's photo, price, seller and reference
 - Reviews tied to a real purchase, with votes and replies, and a reminder after a purchase that can be declined
+
+**Selling**
 - Sellers can give the account buyers should pay to; it is shown only to a buyer who has reserved the item
+- Sales analytics: revenue, average sale and a six-month chart
+- A sold item can be offered again: the form opens pre-filled, to be checked and published as a new listing
+
+**Trust**
+- Public profiles with ratings, reviews and statistics: sales and purchases over time, and category breakdowns
+- Every order keeps the listing exactly as it was sold, so a deal can be looked up even after the listing was edited or deleted
 
 **Communication**
-- Real-time chat between buyer and seller (WebSocket), with photos, editing and deleting
+- Real-time chat between buyer and seller (WebSocket), with photos, editing, deleting and read receipts
 - Support chat with the moderation team
-- In-app notifications and transactional e-mail, including a receipt with the item's photo after payment
-- Read receipts in chats, and alerts for new messages that are hard to miss
+- In-app notifications and alerts for new messages that are hard to miss
+- Transactional e-mail: confirmation, password reset, payment instructions, receipts
 
 **Moderation**
 - Roles: user, admin, super admin
@@ -36,7 +45,7 @@ It started as my bachelor's thesis (Express + Sequelize + MySQL, one 1 000-line 
 - Reports, a moderation queue, temporary and permanent suspensions
 - Moderators can correct a user's listing; the owner is notified and the change is logged
 - An audit log of every moderation action
-- Platform statistics for staff: totals, 30-day trends, sales by category, top sellers and buyers, and an archive of every order with the listing exactly as it was sold
+- Platform statistics for staff: totals, 30-day trends, sales by category, top sellers and buyers, and an archive of every order
 
 ## Tech stack
 
