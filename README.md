@@ -125,7 +125,7 @@ npm run dev                   # web client on http://localhost:5173
 
 Demo accounts after seeding: `anna@example.com`, `luca@example.com`, `mia@example.com`, password `demo-password-123`.
 
-Without SMTP settings the API logs e-mails instead of sending them, so the confirmation link of a new account appears in the server log. To get an administrator, set `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD` in `server/.env` and restart.
+Without SMTP settings the API logs e-mails instead of sending them, so the confirmation link of a new account appears in the server log. To get an administrator, set `SUPER_ADMIN_EMAIL` in `server/.env` and restart: an existing account with that address becomes the super admin and keeps its password; if there is none, it is created with `SUPER_ADMIN_PASSWORD`. Changing the address hands the role over, and the previous super admin becomes a regular admin.
 
 Everything in containers instead: `docker compose up --build`, then open http://localhost:5173.
 

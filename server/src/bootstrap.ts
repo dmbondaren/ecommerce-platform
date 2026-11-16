@@ -19,9 +19,14 @@ export async function ensureCategories() {
 }
 
 /**
- * Makes the account named by SUPER_ADMIN_EMAIL a super administrator. An
+ * Makes the account named by SUPER_ADMIN_EMAIL the super administrator. An
  * existing account is promoted (its password is never touched); otherwise the
  * account is created, which also needs SUPER_ADMIN_PASSWORD.
+ *
+ * The setting is the single source of truth: once that account holds the
+ * role, any other super administrator becomes a regular admin. Changing the
+ * setting therefore hands the role over instead of adding a second owner,
+ * and the previous one can then be managed like any other staff account.
  */
 export async function ensureSuperAdmin() {
   if (!env.SUPER_ADMIN_EMAIL) return
@@ -35,20 +40,26 @@ export async function ensureSuperAdmin() {
       })
       logger.info({ email }, 'Promoted existing account to super admin')
     }
-    return
-  }
-  if (!env.SUPER_ADMIN_PASSWORD) {
+  } else if (env.SUPER_ADMIN_PASSWORD) {
+    await prisma.user.create({
+      data: {
+        email,
+        passwordHash: await hashPassword(env.SUPER_ADMIN_PASSWORD),
+        nickname: `admin-${randomToken().slice(0, 6).toLowerCase()}`,
+        role: 'SUPER_ADMIN',
+        emailVerifiedAt: new Date(),
+      },
+    })
+    logger.info({ email }, 'Created super admin account')
+  } else {
+    // Nobody is demoted here: the platform must not be left without an owner.
     logger.warn({ email }, 'SUPER_ADMIN_EMAIL has no account yet: register it, or set SUPER_ADMIN_PASSWORD')
     return
   }
-  await prisma.user.create({
-    data: {
-      email,
-      passwordHash: await hashPassword(env.SUPER_ADMIN_PASSWORD),
-      nickname: `admin-${randomToken().slice(0, 6).toLowerCase()}`,
-      role: 'SUPER_ADMIN',
-      emailVerifiedAt: new Date(),
-    },
+
+  const demoted = await prisma.user.updateMany({
+    where: { role: 'SUPER_ADMIN', email: { not: email } },
+    data: { role: 'ADMIN' },
   })
-  logger.info({ email }, 'Created super admin account')
+  if (demoted.count > 0) logger.info({ count: demoted.count }, 'Former super admins are now regular admins')
 }
