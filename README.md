@@ -11,7 +11,7 @@ The project started as my bachelor's thesis (Express, Sequelize, MySQL and one 1
 
 **Catalogue**
 - Listings with up to ten photos, categories, price in CHF / EUR / USD / UAH
-- A photo gallery with thumbnails, arrows, drag to change the photo and a full-screen view
+- A photo gallery with a column of thumbnails, arrows, drag to pick a photo and a full-screen view
 - Search with filters (category, price), sorting and pagination; the state lives in the URL, so a search can be shared
 - “Near me”: listings within 1–20 km of the user's home address, which is optional and never shown to others
 - Optional map position per listing (Leaflet and OpenStreetMap), found from the address or placed by hand

@@ -1199,35 +1199,6 @@ input[readonly] {
   object-fit: contain;
 }
 
-.gallery-thumbs {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-  overflow-x: auto;
-}
-
-.gallery-thumbs button {
-  flex: none;
-  width: 72px;
-  height: 72px;
-  padding: 0;
-  overflow: hidden;
-  background: none;
-  border: 2px solid transparent;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.gallery-thumbs button.active {
-  border-color: var(--accent);
-}
-
-.gallery-thumbs img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
 .actions {
   display: flex;
   flex-direction: column;
@@ -2611,7 +2582,68 @@ tbody tr {
   font-weight: 700;
 }
 
-/* Photo gallery: arrows, drag to change the photo, full-screen view */
+/* Photo gallery: thumbnails beside the photo, arrows, drag to pick, full-screen view */
+
+.gallery-body {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.gallery-body.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* The column takes its height from the photo next to it and scrolls when there are more photos. */
+.gallery-thumbs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 0;
+  min-height: 100%;
+  padding: 2px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.gallery-thumbs button {
+  flex: none;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  outline: 3px solid transparent;
+  outline-offset: -3px;
+  opacity: 0.65;
+  cursor: pointer;
+  transition: opacity 0.12s ease, outline-color 0.12s ease, transform 0.12s ease;
+}
+
+.gallery-thumbs button:hover {
+  opacity: 1;
+}
+
+.gallery-thumbs button.active {
+  outline-color: var(--accent);
+  opacity: 1;
+}
+
+/* The photo a drag is pointing at: it becomes the main one when the button is released. */
+.gallery-thumbs button.target {
+  outline-color: var(--success);
+  opacity: 1;
+  transform: scale(1.06);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+.gallery-thumbs img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
 .gallery-stage {
   position: relative;
@@ -2626,6 +2658,10 @@ tbody tr {
 
 .gallery-main.zoomable {
   cursor: zoom-in;
+}
+
+.gallery-main.dragging {
+  cursor: grabbing;
 }
 
 .gallery-main img {
@@ -2681,16 +2717,24 @@ tbody tr {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 56px 16px 16px;
+  padding: 60px 16px 16px;
   background: rgb(8 10 16 / 92%);
 }
 
-.lightbox .gallery-stage {
-  width: min(1200px, 100%);
+.lightbox .gallery-body {
   flex: 1;
+  width: min(1400px, 100%);
   min-height: 0;
+  grid-template-columns: 124px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.lightbox .gallery-body.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lightbox .gallery-stage {
+  height: 100%;
   border-radius: 0;
 }
 
@@ -2702,13 +2746,8 @@ tbody tr {
   cursor: grab;
 }
 
-.lightbox .gallery-main img {
-  object-fit: contain;
-}
-
-.lightbox .gallery-thumbs {
-  max-width: 100%;
-  margin-top: 0;
+.lightbox .gallery-main.dragging {
+  cursor: grabbing;
 }
 
 .lightbox-close {
@@ -2723,6 +2762,31 @@ tbody tr {
 .lightbox-close:hover:not(:disabled) {
   background: rgb(255 255 255 / 15%);
   color: #fff;
+}
+
+/* On a narrow screen there is no room for a column: the thumbnails go under the photo. */
+@media (max-width: 700px) {
+  .gallery-body,
+  .lightbox .gallery-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+  }
+
+  .lightbox .gallery-body {
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .gallery-thumbs {
+    flex-direction: row;
+    order: 2;
+    height: auto;
+    min-height: 0;
+    overflow: auto hidden;
+  }
+
+  .gallery-thumbs button {
+    width: 84px;
+  }
 }
 
 /* Deals: handover place and the chat button */
