@@ -30,12 +30,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false
-    refreshSession().then((session) => {
-      if (!cancelled) setUser(session?.user ?? null)
-    })
-    setSessionLostHandler(() => {
+    refreshSession()
+      // Without the server nobody can be signed in; the page still opens for browsing.
+      .catch(() => null)
+      .then((session) => {
+        if (!cancelled) setUser(session?.user ?? null)
+      })
+    setSessionLostHandler((message) => {
       applySession(null)
-      toast.info(t('Your session has ended. Please sign in again.'))
+      if (message) toast.error(message)
+      else toast.info(t('Your session has ended. Please sign in again.'))
     })
     return () => {
       cancelled = true

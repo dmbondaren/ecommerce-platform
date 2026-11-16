@@ -10,7 +10,7 @@ import { toast } from '../../app/toast'
 import { BarList, TrendChart } from '../../components/charts'
 import { ConfirmDialog, ReasonDialog } from '../../components/dialogs'
 import { ListingImage } from '../../components/ListingCard'
-import { Button, EmptyState, Modal, Pagination, QueryView, UserLink } from '../../components/ui'
+import { Button, EmptyState, Field, FormError, Modal, Pagination, QueryView, UserLink, fieldErrors } from '../../components/ui'
 import { formatDate, formatPrice, formatTime, ORDER_STATUS_LABELS, STATUS_LABELS, timeAgo } from '../../lib/format'
 
 const adminKey = ['admin'] as const
@@ -128,11 +128,138 @@ function Reports() {
   )
 }
 
+const BAN_UNITS = { minutes: 1, hours: 60, days: 24 * 60 } as const
+type BanMode = 'period' | 'until' | 'permanent'
+
+/** `datetime-local` wants local time without a zone, e.g. "2026-11-16T15:30". */
+const toLocalInput = (date: Date) => {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+/**
+ * Suspends a user for a period (minutes, hours or days), until a date picked
+ * in a calendar, or permanently. The suspension always starts now.
+ */
+function BanDialog({ user, onClose, onDone }: { user: AdminUser; onClose: () => void; onDone: () => Promise<unknown> }) {
+  const [reason, setReason] = useState('')
+  const [mode, setMode] = useState<BanMode>('period')
+  const [amount, setAmount] = useState('30')
+  const [unit, setUnit] = useState<keyof typeof BAN_UNITS>('minutes')
+  const [until, setUntil] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<unknown>(null)
+  const errors = fieldErrors(error)
+  const [earliest] = useState(() => toLocalInput(new Date(Date.now() + 2 * 60_000)))
+
+  const ends =
+    mode === 'period' && Number(amount) > 0
+      ? new Date(Date.now() + Number(amount) * BAN_UNITS[unit] * 60_000)
+      : mode === 'until' && until
+        ? new Date(until)
+        : null
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    setBusy(true)
+    setError(null)
+    try {
+      await adminApi.ban(user.id, {
+        reason: reason.trim(),
+        minutes: mode === 'period' ? Math.round(Number(amount) * BAN_UNITS[unit]) : undefined,
+        until: mode === 'until' ? new Date(until).toISOString() : undefined,
+      })
+      await onDone()
+      onClose()
+    } catch (err) {
+      setError(err)
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal title={`Suspend ${user.nickname}`} onClose={onClose}>
+      <form onSubmit={(event) => void submit(event)}>
+        <div className="modal-body">
+          <Field
+            label="Reason"
+            hint="The user is signed out at once and sees this reason when trying to sign in."
+            errors={errors.reason}
+          >
+            {(props) => (
+              <textarea {...props} rows={3} required minLength={3} maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} />
+            )}
+          </Field>
+
+          <fieldset className="choice-group">
+            <legend>How long</legend>
+            <label className="choice">
+              <input type="radio" name="ban-mode" checked={mode === 'period'} onChange={() => setMode('period')} />
+              <span>For</span>
+              <input
+                type="number"
+                aria-label="Length of the suspension"
+                min={1}
+                max={100000}
+                step={1}
+                required={mode === 'period'}
+                disabled={mode !== 'period'}
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+              />
+              <select aria-label="Unit" disabled={mode !== 'period'} value={unit} onChange={(event) => setUnit(event.target.value as keyof typeof BAN_UNITS)}>
+                <option value="minutes">minutes</option>
+                <option value="hours">hours</option>
+                <option value="days">days</option>
+              </select>
+            </label>
+            <label className="choice">
+              <input type="radio" name="ban-mode" checked={mode === 'until'} onChange={() => setMode('until')} />
+              <span>From now until</span>
+              <input
+                type="datetime-local"
+                aria-label="End of the suspension"
+                min={earliest}
+                required={mode === 'until'}
+                disabled={mode !== 'until'}
+                value={until}
+                onChange={(event) => setUntil(event.target.value)}
+              />
+            </label>
+            <label className="choice">
+              <input type="radio" name="ban-mode" checked={mode === 'permanent'} onChange={() => setMode('permanent')} />
+              <span>Permanently</span>
+            </label>
+          </fieldset>
+          {(errors.minutes ?? errors.until) && <p className="field-error">{(errors.minutes ?? errors.until ?? []).join('. ')}</p>}
+
+          <p className="muted" role="status">
+            {mode === 'permanent'
+              ? 'The account stays suspended until a moderator lifts the suspension.'
+              : ends && !Number.isNaN(ends.getTime())
+                ? `Suspended from now until ${formatDate(ends.toISOString())}, ${formatTime(ends.toISOString())}.`
+                : 'Choose when the suspension ends.'}
+          </p>
+          {Object.keys(errors).length === 0 && <FormError error={error} />}
+        </div>
+        <footer className="modal-footer">
+          <Button onClick={onClose}>Cancel</Button>
+          <Button type="submit" variant="danger" busy={busy}>
+            Suspend account
+          </Button>
+        </footer>
+      </form>
+    </Modal>
+  )
+}
+
 type UserAction = { kind: 'ban' | 'delete' | 'promote' | 'demote'; user: AdminUser }
 
 const banLabel = (user: AdminUser) => {
   if (user.bannedPermanently) return 'Suspended permanently'
-  if (user.bannedUntil && new Date(user.bannedUntil) > new Date()) return `Suspended until ${formatDate(user.bannedUntil)}`
+  if (user.bannedUntil && new Date(user.bannedUntil) > new Date()) {
+    return `Suspended until ${formatDate(user.bannedUntil)}, ${formatTime(user.bannedUntil)}`
+  }
   return null
 }
 
@@ -258,20 +385,7 @@ function Users() {
         }
       </QueryView>
 
-      {action?.kind === 'ban' && (
-        <ReasonDialog
-          title={`Suspend ${action.user.nickname}`}
-          hint="The user is signed out at once and sees this reason when trying to sign in."
-          confirmLabel="Suspend account"
-          danger
-          withDays
-          onClose={() => setAction(null)}
-          onSubmit={async (reason, days) => {
-            await adminApi.ban(action.user.id, reason, days)
-            await refresh()
-          }}
-        />
-      )}
+      {action?.kind === 'ban' && <BanDialog user={action.user} onClose={() => setAction(null)} onDone={refresh} />}
       {action?.kind === 'delete' && (
         <ReasonDialog
           title={`Delete ${action.user.nickname}`}

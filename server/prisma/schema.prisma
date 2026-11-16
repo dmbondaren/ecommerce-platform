@@ -158,6 +158,9 @@ model Listing {
   /// Optional pin on the map; both are set or both are null.
   /// Shown to a buyer only after they have reserved the item.
   paymentAccount   String?
+  /// Where the item changes hands: a meeting place or the address it is shipped from.
+  /// Like the payment account, shown to a buyer only after they have reserved the item.
+  meetingPlace     String?
   latitude         Float?
   longitude        Float?
   phone            String?
@@ -248,6 +251,8 @@ model Order {
   paidAt              DateTime?
   /// The seller's payment account at the time of the order, if they gave one.
   paymentAccount      String?
+  /// Where the handover takes place, as the listing said at the time of the order.
+  meetingPlace        String?
   /// Set when the buyer chose not to review the purchase, which ends the reminder.
   reviewSkippedAt     DateTime?
   createdAt           DateTime    @default(now())

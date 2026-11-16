@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type ReactNode } from 'react'
-import { Link, NavLink, Outlet } from 'react-router-dom'
-import { accountApi, listingApi, orderApi } from '../../api/endpoints'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { accountApi, chatApi, listingApi, orderApi } from '../../api/endpoints'
 import type { Listing, Order, Purchase } from '../../api/types'
 import { useDocumentTitle, useSavedListings } from '../../app/hooks'
 import { keys } from '../../app/queryClient'
 import { toast } from '../../app/toast'
 import { ConfirmDialog } from '../../components/dialogs'
+import { Icon } from '../../components/Icon'
 import { ListingGrid, ListingImage } from '../../components/ListingCard'
 import { awaitsReview } from '../../components/ReviewBanner'
 import { ReviewDialog } from '../../components/ReviewDialog'
@@ -174,6 +175,30 @@ function OrderRow({ order, children }: { order: Order; children: ReactNode }) {
   )
 }
 
+/** Opens the chat of a deal for either side, and shows where the handover takes place. */
+function DealContact({ order, label }: { order: Order; label: string }) {
+  const navigate = useNavigate()
+  const open = useMutation({
+    mutationFn: () => chatApi.openForOrder(order.id),
+    onSuccess: (conversation) => navigate(`/messages/${conversation.id}`),
+  })
+  const standing = order.status === 'PENDING_PAYMENT' || order.status === 'PAID'
+  if (!standing || !order.buyer || !order.seller) return null
+  return (
+    <div className="deal-contact">
+      {order.meetingPlace && (
+        <span className="inline">
+          <Icon name="pin" size={16} />
+          <span className="muted">{t('Handover:')}</span> {order.meetingPlace}
+        </span>
+      )}
+      <Button size="sm" icon="chat" busy={open.isPending} onClick={() => open.mutate()}>
+        {label}
+      </Button>
+    </div>
+  )
+}
+
 export function Purchases() {
   const query = useQuery({ queryKey: keys.purchases, queryFn: orderApi.purchases })
   const now = useNow(query.data?.some((order) => order.status === 'PENDING_PAYMENT') ?? false)
@@ -198,6 +223,7 @@ export function Purchases() {
                   <span className="muted">{t('Seller:')}</span>
                   <UserLink user={order.seller} />
                 </span>
+                <DealContact order={order} label={t('Message seller')} />
                 {isAwaitingPayment(order, now) && order.expiresAt ? (
                   <div className="row">
                     <span className="countdown">
@@ -324,6 +350,7 @@ export function Sales() {
                   <span className="muted">{t('Buyer:')}</span>
                   <UserLink user={order.buyer} />
                 </span>
+                <DealContact order={order} label={t('Message buyer')} />
                 {order.review && <Stars value={order.review.rating} />}
               </OrderRow>
             ))}

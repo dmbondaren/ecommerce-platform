@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { pageSchema, param } from '../../lib/http'
 import { parse } from '../../lib/validation'
 import { getAuth, requireAdmin, requireAuth, requireSuperAdmin } from '../../middleware/auth'
-import { listingInputSchema } from '../listings/listing.schemas'
+import { staffListingInputSchema } from '../listings/listing.schemas'
 import { reportService } from '../reports/reports.service'
 import {
   adminService,
@@ -52,7 +52,7 @@ adminRouter.get('/listings', async (_req, res) => {
 })
 
 adminRouter.put('/listings/:id', async (req, res) => {
-  const input = parse(listingInputSchema, req.body)
+  const input = parse(staffListingInputSchema, req.body)
   res.json(await adminService.editListing(getAuth(req), param(req, 'id'), input))
 })
 

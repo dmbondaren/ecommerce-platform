@@ -6,8 +6,8 @@ import { prisma } from '../../lib/prisma'
 import { isAdminRole, type AuthContext } from '../../middleware/auth'
 import { hub } from '../../realtime/hub'
 import { notificationService } from '../notifications/notifications.service'
-import { listingInclude, toListing } from './listing.dto'
-import type { ListingInput, ListingQuery } from './listing.schemas'
+import { listingInclude, toListing, toOwnListing } from './listing.dto'
+import type { ListingInput, ListingQuery, StaffListingInput } from './listing.schemas'
 import { screenListing } from './moderation'
 
 // `id` is the tie-breaker that keeps pages stable when the first key is equal.
@@ -44,7 +44,7 @@ function trackSearch(rawQuery: string) {
 }
 
 /** Splits validated input into database columns. */
-function toColumns(input: ListingInput) {
+function toColumns<T extends StaffListingInput>(input: T) {
   const { imageUrls, coordinates, ...fields } = input
   return {
     imageUrls,
@@ -155,7 +155,7 @@ export const listingService = {
     const isPublic = ['ACTIVE', 'RESERVED', 'SOLD'].includes(listing.status)
     const isPrivileged = viewer !== undefined && (viewer.userId === listing.ownerId || isAdminRole(viewer.role))
     if (!isPublic && !isPrivileged) throw notFound('Listing')
-    return toListing(listing)
+    return viewer?.userId === listing.ownerId ? toOwnListing(listing) : toListing(listing)
   },
 
   async byOwner(ownerId: string, options = { onlyActive: false }) {
@@ -182,16 +182,28 @@ export const listingService = {
     await rememberPaymentAccount(ownerId, input.paymentAccount)
     if (flag) await reportToModerators(listing.id, flag)
     announce(listing.id, listing.status)
-    return toListing(listing)
+    return toOwnListing(listing)
+  },
+
+  /** The owner edits their own listing. */
+  async update(ownerId: string, id: string, input: ListingInput) {
+    await findOwned(ownerId, id)
+    const updated = await this.applyEdit(id, input, { asStaff: false })
+    await rememberPaymentAccount(ownerId, input.paymentAccount)
+    return toOwnListing(updated)
   },
 
   /**
-   * Edits a listing. Normally only its owner may; `asStaff` lets a moderator
-   * correct someone else's listing, which never touches the owner's payment
-   * account and does not send the listing back for review.
+   * A moderator corrects someone else's listing. This never touches the
+   * owner's payment account or meeting place, and does not send the listing
+   * back for review.
    */
-  async update(editorId: string, id: string, input: ListingInput, options = { asStaff: false }) {
-    const current = options.asStaff ? await prisma.listing.findUnique({ where: { id } }) : await findOwned(editorId, id)
+  async updateAsStaff(id: string, input: StaffListingInput) {
+    return toListing(await this.applyEdit(id, input, { asStaff: true }))
+  },
+
+  async applyEdit(id: string, input: StaffListingInput, options: { asStaff: boolean }) {
+    const current = await prisma.listing.findUnique({ where: { id } })
     if (!current) throw notFound('Listing')
     const ownerId = current.ownerId
     if (current.status === 'SOLD' || current.status === 'ARCHIVED') {
@@ -201,9 +213,7 @@ export const listingService = {
       throw conflict('This listing is reserved by a buyer and cannot be edited until the payment is settled')
     }
     await assertCategoryExists(input.categoryId)
-    const { imageUrls, fields: allFields } = toColumns(input)
-    // A moderator does not know the owner's account, so it stays as it is.
-    const fields = options.asStaff ? { ...allFields, paymentAccount: undefined } : allFields
+    const { imageUrls, fields } = toColumns(input)
     const flag = options.asStaff ? null : screenListing(input.title, input.description)
     const held = !options.asStaff && (current.status === 'DEACTIVATED' || current.status === 'PENDING_REVIEW')
     const updated = await prisma.listing.update({
@@ -216,7 +226,6 @@ export const listingService = {
       },
       include: listingInclude,
     })
-    if (!options.asStaff) await rememberPaymentAccount(ownerId, input.paymentAccount)
     if (flag) await reportToModerators(id, flag)
     announce(updated.id, updated.status)
 
@@ -236,7 +245,7 @@ export const listingService = {
         )
       }
     }
-    return toListing(updated)
+    return updated
   },
 
   /** Listings that were sold are archived instead of deleted so reports and chats keep their context. */

@@ -9,41 +9,13 @@ import { useDocumentTitle, useRequireLogin, useSavedListings } from '../app/hook
 import { keys } from '../app/queryClient'
 import { toast } from '../app/toast'
 import { ConfirmDialog, ReasonDialog } from '../components/dialogs'
+import { Gallery } from '../components/Gallery'
 import { Icon } from '../components/Icon'
-import { ListingImage } from '../components/ListingCard'
 import { LazyMap } from '../components/LocationPicker'
 import { Button, QueryView, Spinner, UserLink } from '../components/ui'
 import { googleMapsUrl } from '../lib/address'
 import { formatDate, formatPrice, STATUS_LABELS } from '../lib/format'
 import { t } from '../app/i18n'
-
-function Gallery({ images, title }: { images: string[]; title: string }) {
-  const [index, setIndex] = useState(0)
-  const current = images[Math.min(index, images.length - 1)]
-  return (
-    <div className="gallery">
-      <div className="gallery-main">
-        <ListingImage src={current} alt={title} />
-      </div>
-      {images.length > 1 && (
-        <div className="gallery-thumbs">
-          {images.map((url, position) => (
-            <button
-              key={url}
-              type="button"
-              className={position === index ? 'active' : undefined}
-              onClick={() => setIndex(position)}
-              aria-label={`Photo ${position + 1} of ${images.length}`}
-              aria-current={position === index}
-            >
-              <img src={url} alt="" loading="lazy" />
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 type Dialog = 'buy' | 'delete' | 'report' | 'takeDown' | 'remove' | null
 

@@ -718,4 +718,40 @@ export const uk: Record<string, string> = {
     'Нове повідомлення від {name}',
   'You are editing another user’s listing as a moderator. The owner will be notified.':
     'Ви редагуєте оголошення іншого користувача як модератор. Власника буде сповіщено.',
+  'The server is not responding. Please try again in a moment.':
+    'Сервер не відповідає. Спробуйте ще раз за хвилину.',
+  'Please sign in to continue.':
+    'Увійдіть, щоб продовжити.',
+  'Account for payments':
+    'Рахунок для оплати',
+  'The card or IBAN the buyer transfers the money to. A buyer sees it only after reserving the item. It is remembered for your next listings.':
+    'Картка або IBAN, на які покупець переказує гроші. Покупець бачить їх лише після бронювання. Значення запам’ятовується для наступних оголошень.',
+  'Use letters, digits and spaces only':
+    'Лише літери, цифри та пробіли',
+  'Handover: meeting place or shipping':
+    'Передача: місце зустрічі або доставка',
+  'Where you meet the buyer, or how you send the item. A buyer sees it only after reserving the item; the details are agreed in the chat.':
+    'Де ви зустрінетеся з покупцем або як надішлете товар. Покупець бачить це лише після бронювання; деталі узгоджуються в чаті.',
+  'e.g. Zürich main station, or by post from 8001 Zürich':
+    'напр. головний вокзал Цюриха або поштою з 8001 Zürich',
+  'Sent to {email}. If it is not in your inbox within a minute, look in the spam folder.':
+    'Надіслано на {email}. Якщо за хвилину листа немає у вхідних, перевірте папку «Спам».',
+  'Send the confirmation e-mail again':
+    'Надіслати лист підтвердження ще раз',
+  'The e-mail may land in the spam folder.':
+    'Лист може потрапити до папки «Спам».',
+  'Confirm your e-mail address to publish listings. The link is in the e-mail we sent you; it may be in the spam folder.':
+    'Підтвердьте адресу e-mail, щоб публікувати оголошення. Посилання є в листі, який ми вам надіслали; він може бути в папці «Спам».',
+  'Handover:':
+    'Передача:',
+  'Message buyer':
+    'Написати покупцю',
+  'Previous photo':
+    'Попереднє фото',
+  'Next photo':
+    'Наступне фото',
+  'Photo {n} of {total}':
+    'Фото {n} з {total}',
+  'This link is invalid or has expired. Sign in and use “Send the confirmation e-mail again” in the banner at the top.':
+    'Це посилання недійсне або застаріло. Увійдіть і натисніть «Надіслати лист підтвердження ще раз» у банері вгорі.',
 }

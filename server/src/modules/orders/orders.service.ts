@@ -49,8 +49,14 @@ const paymentDetails = (order: OrderRow) => ({
   currency: order.currency,
 })
 
+/** The handover place is private to the two people in the deal, and only while the deal stands. */
+const meetingPlaceOf = (order: OrderRow) =>
+  order.status === 'PENDING_PAYMENT' || order.status === 'PAID' ? order.meetingPlace : null
+
+const toSale = (order: OrderRow) => ({ ...toOrder(order), meetingPlace: meetingPlaceOf(order) })
+
 const toPurchase = (order: OrderRow) => ({
-  ...toOrder(order),
+  ...toSale(order),
   payment: order.status === 'PENDING_PAYMENT' ? paymentDetails(order) : null,
   reviewSkipped: order.reviewSkippedAt !== null,
 })
@@ -98,12 +104,16 @@ function sendPaymentInstructions(buyerId: string, orders: OrderRow[]) {
           ['Recipient', paymentDetails(order).recipient],
           ['Account', paymentDetails(order).iban],
           ['Reference', order.paymentReference ?? order.id],
+          ...handoverLine(order),
         ],
         action: { label: 'I have paid', url: `${env.CLIENT_URL}/account/purchases` },
       })
     }
   })
 }
+
+const handoverLine = (order: OrderRow): [string, string][] =>
+  order.meetingPlace ? [['Handover', order.meetingPlace]] : []
 
 /** Puts a listing back on sale, unless something else happened to it in the meantime. */
 const releaseListing = (tx: Prisma.TransactionClient, listingId: string | null) =>
@@ -145,6 +155,7 @@ export const orderService = {
             status: 'PENDING_PAYMENT',
             paymentReference: newPaymentReference(),
             paymentAccount: listing.paymentAccount,
+            meetingPlace: listing.meetingPlace,
             expiresAt,
           },
         })
@@ -219,6 +230,7 @@ export const orderService = {
         ['Seller', order.seller?.nickname ?? 'Deleted account'],
         ['Paid on', (order.paidAt ?? new Date()).toISOString().slice(0, 16).replace('T', ' ') + ' UTC'],
         ['Reference', order.paymentReference ?? order.id],
+        ...handoverLine(order),
       ]
       if (buyerEmail) {
         await mailer.send({
@@ -328,7 +340,7 @@ export const orderService = {
       include: orderInclude,
       orderBy: { createdAt: 'desc' },
     })
-    return rows.map(toOrder)
+    return rows.map(toSale)
   },
 
   async salesSummary(userId: string) {

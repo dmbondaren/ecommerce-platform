@@ -76,10 +76,20 @@ export async function seedDemoData() {
       data: {
         ...listing,
         currency: 'CHF',
+        paymentAccount: 'CH93 0076 2011 6238 5295 7',
+        meetingPlace: `${listing.location}, main station. The exact time is agreed in the chat.`,
         owner: { connect: { id: ownerId } },
         category: { connect: { slug: category } },
       },
     })
   }
+  // Demo listings created before these fields existed get them now, so a demo purchase shows a complete deal.
+  await prisma.listing.updateMany({
+    where: { ownerId: { in: knownOwners }, title: { in: LISTINGS.map((listing) => listing.title) }, meetingPlace: null },
+    data: {
+      paymentAccount: 'CH93 0076 2011 6238 5295 7',
+      meetingPlace: 'Main station. The exact time is agreed in the chat.',
+    },
+  })
   logger.info({ users: USERS.map((user) => user.email), password: DEMO_PASSWORD }, 'Demo data is ready')
 }

@@ -33,3 +33,10 @@ export const toListing = (listing: ListingRow) => ({
 })
 
 export type ListingDto = ReturnType<typeof toListing>
+
+/** The owner's view also carries the two fields that buyers only see after reserving. */
+export const toOwnListing = (listing: ListingRow) => ({
+  ...toListing(listing),
+  paymentAccount: listing.paymentAccount,
+  meetingPlace: listing.meetingPlace,
+})

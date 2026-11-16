@@ -8,7 +8,7 @@ import { lastMailFailure, mailer, mailTransport, parseSender } from '../../mail/
 import { isAdminRole, type AuthContext } from '../../middleware/auth'
 import { hub } from '../../realtime/hub'
 import { listingInclude, toListing } from '../listings/listing.dto'
-import type { ListingInput } from '../listings/listing.schemas'
+import type { StaffListingInput } from '../listings/listing.schemas'
 import { listingService } from '../listings/listings.service'
 import { notificationService } from '../notifications/notifications.service'
 import { publicUserSelect, toAdminUser, toPublicUser } from '../users/user.dto'
@@ -19,11 +19,30 @@ import { buildPlatformStats } from './platform-stats'
 const reason = z.string().trim().min(3, 'Give a reason of at least 3 characters').max(500)
 
 export const reasonSchema = z.object({ reason })
-export const banSchema = z.object({
-  reason,
-  /** Length of the suspension; leave out for a permanent ban. */
-  days: z.coerce.number().int().min(1).max(3650).nullish(),
-})
+const MAX_BAN_MINUTES = 10 * 365 * 24 * 60
+
+/**
+ * A suspension lasts a number of minutes or until a given moment; with
+ * neither it is permanent.
+ */
+export const banSchema = z
+  .object({
+    reason,
+    minutes: z.coerce.number().int().min(1).max(MAX_BAN_MINUTES).nullish(),
+    until: z.coerce.date().nullish(),
+  })
+  .refine((value) => !(value.minutes && value.until), {
+    message: 'Give either a duration or an end date, not both',
+    path: ['until'],
+  })
+  .refine((value) => !value.until || value.until.getTime() > Date.now() + 30_000, {
+    message: 'The end of the suspension must be in the future',
+    path: ['until'],
+  })
+
+/** When a suspension ends; `null` means never. */
+export const banEnd = (input: { minutes?: number | null; until?: Date | null }, now = new Date()) =>
+  input.until ?? (input.minutes ? new Date(now.getTime() + input.minutes * 60_000) : null)
 export const roleSchema = z.object({ role: z.enum(['USER', 'ADMIN']) })
 export const orderSearchSchema = z.object({
   q: z.string().trim().max(100).optional(),
@@ -92,7 +111,7 @@ export const adminService = {
   async ban(actor: AuthContext, userId: string, input: z.infer<typeof banSchema>) {
     const target = await findUser(userId)
     assertCanModerate(actor, target)
-    const bannedUntil = input.days ? new Date(Date.now() + input.days * 24 * 60 * 60 * 1000) : null
+    const bannedUntil = banEnd(input)
     const [updated] = await prisma.$transaction([
       prisma.user.update({
         where: { id: userId },
@@ -212,8 +231,8 @@ export const adminService = {
   },
 
   /** A moderator corrects a user's listing; the owner is told and the change is logged. */
-  async editListing(actor: AuthContext, id: string, input: ListingInput) {
-    const updated = await listingService.update(actor.userId, id, input, { asStaff: true })
+  async editListing(actor: AuthContext, id: string, input: StaffListingInput) {
+    const updated = await listingService.updateAsStaff(id, input)
     await recordAudit({ actorId: actor.userId, action: 'LISTING_EDITED', targetType: 'listing', targetId: id, reason: updated.title })
     if (updated.owner.id !== actor.userId) {
       notificationService.notifyInBackground(

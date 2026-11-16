@@ -718,4 +718,40 @@ export const de: Record<string, string> = {
     'Neue Nachricht von {name}',
   'You are editing another user’s listing as a moderator. The owner will be notified.':
     'Sie bearbeiten als Moderator das Inserat eines anderen Nutzers. Der Besitzer wird benachrichtigt.',
+  'The server is not responding. Please try again in a moment.':
+    'Der Server antwortet nicht. Bitte versuchen Sie es gleich noch einmal.',
+  'Please sign in to continue.':
+    'Bitte melden Sie sich an, um fortzufahren.',
+  'Account for payments':
+    'Konto für Zahlungen',
+  'The card or IBAN the buyer transfers the money to. A buyer sees it only after reserving the item. It is remembered for your next listings.':
+    'Die Karte oder IBAN, auf die der Käufer das Geld überweist. Ein Käufer sieht sie erst nach der Reservierung. Sie wird für Ihre nächsten Inserate gespeichert.',
+  'Use letters, digits and spaces only':
+    'Nur Buchstaben, Ziffern und Leerzeichen verwenden',
+  'Handover: meeting place or shipping':
+    'Übergabe: Treffpunkt oder Versand',
+  'Where you meet the buyer, or how you send the item. A buyer sees it only after reserving the item; the details are agreed in the chat.':
+    'Wo Sie den Käufer treffen oder wie Sie den Artikel versenden. Ein Käufer sieht das erst nach der Reservierung; die Details werden im Chat vereinbart.',
+  'e.g. Zürich main station, or by post from 8001 Zürich':
+    'z. B. Zürich Hauptbahnhof oder per Post ab 8001 Zürich',
+  'Sent to {email}. If it is not in your inbox within a minute, look in the spam folder.':
+    'An {email} gesendet. Falls die E-Mail nach einer Minute nicht im Posteingang ist, schauen Sie im Spam-Ordner nach.',
+  'Send the confirmation e-mail again':
+    'Bestätigungs-E-Mail erneut senden',
+  'The e-mail may land in the spam folder.':
+    'Die E-Mail kann im Spam-Ordner landen.',
+  'Confirm your e-mail address to publish listings. The link is in the e-mail we sent you; it may be in the spam folder.':
+    'Bestätigen Sie Ihre E-Mail-Adresse, um Inserate zu veröffentlichen. Der Link steht in der E-Mail, die wir Ihnen gesendet haben; sie kann im Spam-Ordner liegen.',
+  'Handover:':
+    'Übergabe:',
+  'Message buyer':
+    'Nachricht an Käufer',
+  'Previous photo':
+    'Vorheriges Foto',
+  'Next photo':
+    'Nächstes Foto',
+  'Photo {n} of {total}':
+    'Foto {n} von {total}',
+  'This link is invalid or has expired. Sign in and use “Send the confirmation e-mail again” in the banner at the top.':
+    'Dieser Link ist ungültig oder abgelaufen. Melden Sie sich an und verwenden Sie oben im Banner «Bestätigungs-E-Mail erneut senden».',
 }

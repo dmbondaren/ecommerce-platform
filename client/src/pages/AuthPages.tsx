@@ -219,7 +219,7 @@ export function VerifyEmail() {
         </>
       )}
       {state === 'failed' && (
-        <p role="alert">{t('This link is invalid or has expired. Sign in and use “Send it again” in the banner at the top.')}</p>
+        <p role="alert">{t('This link is invalid or has expired. Sign in and use “Send the confirmation e-mail again” in the banner at the top.')}</p>
       )}
     </AuthCard>
   )

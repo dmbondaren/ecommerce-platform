@@ -60,7 +60,7 @@ export function useRealtime() {
 
     const connect = async () => {
       // The token is only checked during the handshake, so make sure it is fresh.
-      if (userId && attempts > 0) await refreshSession()
+      if (userId && attempts > 0) await refreshSession().catch(() => null)
       if (closed) return
       const token = userId ? getAccessToken() : null
       const origin = window.location.origin.replace(/^http/, 'ws')

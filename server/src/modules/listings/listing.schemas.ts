@@ -34,12 +34,17 @@ export const listingInputSchema = z.object({
   imageUrls: z.array(uploadUrlSchema).min(1, 'Add at least one photo').max(10),
   /** Where the buyer should transfer the money, e.g. an IBAN. Never part of the public listing. */
   paymentAccount: z
-    .string()
+    .string({ required_error: 'Enter the account buyers should pay to' })
     .trim()
+    .min(5, 'Enter the account buyers should pay to')
     .max(64)
-    .regex(/^[A-Za-z0-9 +-]*$/, 'Use letters, digits and spaces only')
-    .nullish()
-    .transform((value) => value || null),
+    .regex(/^[A-Za-z0-9 +-]*$/, 'Use letters, digits and spaces only'),
+  /** Where the item changes hands. Like the payment account, only a buyer who reserved the item sees it. */
+  meetingPlace: z
+    .string({ required_error: 'Say where the buyer gets the item' })
+    .trim()
+    .min(3, 'Say where the buyer gets the item')
+    .max(200),
   /** Optional pin on the map. */
   coordinates: z
     .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) })
@@ -48,6 +53,14 @@ export const listingInputSchema = z.object({
 })
 
 export type ListingInput = z.infer<typeof listingInputSchema>
+
+/**
+ * What a moderator may send when correcting someone else's listing. The two
+ * private fields are not shown to moderators, so they are neither required
+ * nor changed.
+ */
+export const staffListingInputSchema = listingInputSchema.omit({ paymentAccount: true, meetingPlace: true })
+export type StaffListingInput = z.infer<typeof staffListingInputSchema>
 
 export const LISTING_SORTS = ['newest', 'oldest', 'price_asc', 'price_desc', 'popular'] as const
 

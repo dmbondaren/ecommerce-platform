@@ -128,6 +128,8 @@ export const chatApi = {
   list: () => api<Conversation[]>('/conversations'),
   get: (id: string) => api<Conversation>(`/conversations/${id}`),
   openForListing: (listingId: string) => post<Conversation>('/conversations', { listingId }),
+  /** The chat between the buyer and the seller of an order; either of them may open it. */
+  openForOrder: (orderId: string) => post<Conversation>('/conversations', { orderId }),
   openSupport: (userId?: string) => post<Conversation>('/conversations', { support: true, userId }),
   unreadCount: () => api<{ count: number }>('/conversations/unread-count'),
   messages: (id: string, before?: string) =>
@@ -150,8 +152,9 @@ export async function uploadImages(files: File[]): Promise<UploadedFile[]> {
 export const adminApi = {
   users: (q: string, page: number) => api<Page<AdminUser>>('/admin/users', { query: { q, page } }),
   user: (id: string) => api<AdminUserDetail>(`/admin/users/${id}`),
-  ban: (id: string, reason: string, days: number | null) =>
-    post<AdminUser>(`/admin/users/${id}/ban`, { reason, days }),
+  /** With neither `minutes` nor `until` the suspension is permanent. */
+  ban: (id: string, input: { reason: string; minutes?: number; until?: string }) =>
+    post<AdminUser>(`/admin/users/${id}/ban`, input),
   unban: (id: string) => api<AdminUser>(`/admin/users/${id}/ban`, { method: 'DELETE' }),
   setRole: (id: string, role: Extract<Role, 'USER' | 'ADMIN'>) =>
     api<AdminUser>(`/admin/users/${id}/role`, { method: 'PUT', body: { role } }),

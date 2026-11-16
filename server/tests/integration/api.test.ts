@@ -34,6 +34,8 @@ const listingBody = () => ({
   currency: 'CHF',
   categoryId,
   imageUrls: ['/uploads/3f0c9a52-6f0e-4c58-9a59-0b5f3c1b9a10.jpg'],
+  paymentAccount: 'CH93 0076 2011 6238 5295 7',
+  meetingPlace: 'Zürich main station, by the big clock',
 })
 
 beforeAll(async () => {

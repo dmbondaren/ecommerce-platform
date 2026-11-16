@@ -51,9 +51,7 @@ interface ReasonProps {
   confirmLabel: string
   danger?: boolean
   minLength?: number
-  /** Adds a "number of days" field, e.g. for a temporary suspension. */
-  withDays?: boolean
-  onSubmit: (reason: string, days: number | null) => Promise<unknown>
+  onSubmit: (reason: string) => Promise<unknown>
   onClose: () => void
 }
 
@@ -64,12 +62,10 @@ export function ReasonDialog({
   confirmLabel,
   danger,
   minLength = 3,
-  withDays,
   onSubmit,
   onClose,
 }: ReasonProps) {
   const [reason, setReason] = useState('')
-  const [days, setDays] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<unknown>(null)
   const errors = fieldErrors(error)
@@ -79,7 +75,7 @@ export function ReasonDialog({
     setBusy(true)
     setError(null)
     try {
-      await onSubmit(reason.trim(), days ? Number(days) : null)
+      await onSubmit(reason.trim())
       onClose()
     } catch (err) {
       setError(err)
@@ -104,20 +100,6 @@ export function ReasonDialog({
               />
             )}
           </Field>
-          {withDays && (
-            <Field label={t('Duration in days')} hint={t('Leave empty for a permanent suspension.')} errors={errors.days}>
-              {(props) => (
-                <input
-                  {...props}
-                  type="number"
-                  min={1}
-                  max={3650}
-                  value={days}
-                  onChange={(event) => setDays(event.target.value)}
-                />
-              )}
-            </Field>
-          )}
           {Object.keys(errors).length === 0 && <FormError error={error} />}
         </div>
         <footer className="modal-footer">

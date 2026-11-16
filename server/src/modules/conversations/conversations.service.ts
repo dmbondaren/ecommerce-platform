@@ -11,6 +11,8 @@ const PAGE_SIZE = 50
 const ADMIN_ROOM_KEY = 'admin-room'
 
 export const openConversationSchema = z.union([
+  // The chat that belongs to a deal; either side of the order may open it.
+  z.object({ orderId: z.string().min(1).max(40) }),
   z.object({ listingId: z.string().min(1).max(40) }),
   // `userId` lets staff open the support chat of a particular user.
   z.object({ support: z.literal(true), userId: z.string().min(1).max(40).optional() }),
@@ -142,7 +144,22 @@ export const conversationService = {
   /** Returns the existing conversation or creates it; the unique `key` makes that race-free. */
   async open(auth: AuthContext, input: OpenConversationInput) {
     let conversation: Conversation
-    if ('listingId' in input) {
+    if ('orderId' in input) {
+      const order = await prisma.order.findUnique({
+        where: { id: input.orderId },
+        select: { id: true, buyerId: true, sellerId: true, listingId: true },
+      })
+      const isParty = order !== null && (order.buyerId === auth.userId || order.sellerId === auth.userId)
+      // A deleted account leaves the order without one of its sides: nobody is left to write to.
+      if (!order || !isParty || !order.buyerId || !order.sellerId) throw notFound('Order')
+      // The same key as a chat started from the listing page, so a deal never has two chats.
+      const key = order.listingId ? `listing:${order.listingId}:${order.buyerId}` : `order:${order.id}`
+      conversation = await prisma.conversation.upsert({
+        where: { key },
+        create: { key, type: 'LISTING', listingId: order.listingId, buyerId: order.buyerId, sellerId: order.sellerId },
+        update: order.buyerId === auth.userId ? { hiddenForBuyer: false } : { hiddenForSeller: false },
+      })
+    } else if ('listingId' in input) {
       const listing = await prisma.listing.findUnique({
         where: { id: input.listingId },
         select: { id: true, ownerId: true, status: true },

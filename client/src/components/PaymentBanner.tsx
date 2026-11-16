@@ -42,6 +42,7 @@ export function PaymentDetailsDialog({ order, onClose }: { order: Purchase; onCl
         ['Reference', payment.reference ?? order.id],
       ]
     : []
+  if (order.meetingPlace) rows.push(['Handover', order.meetingPlace])
   return (
     <Modal title={t('Payment details')} onClose={onClose}>
       <div className="modal-body">

@@ -78,6 +78,9 @@ export interface Listing {
   owner: PublicUser
   createdAt: string
   updatedAt: string
+  /** Private to the owner: present only when the viewer owns the listing. */
+  paymentAccount?: string | null
+  meetingPlace?: string | null
 }
 
 export interface ListingInput {
@@ -91,6 +94,8 @@ export interface ListingInput {
   imageUrls: string[]
   coordinates: Coordinates | null
   paymentAccount: string
+  /** Where the buyer gets the item: a meeting place or how it is shipped. */
+  meetingPlace: string
 }
 
 export interface Page<T> {
@@ -118,6 +123,8 @@ export interface Order {
   seller: PublicUser | null
   review: { id: string; rating: number } | null
   createdAt: string
+  /** Where the handover takes place; only the buyer and the seller of a standing deal get it. */
+  meetingPlace?: string | null
 }
 
 export interface PaymentDetails {

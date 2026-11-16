@@ -718,4 +718,40 @@ export const ru: Record<string, string> = {
     'Новое сообщение от {name}',
   'You are editing another user’s listing as a moderator. The owner will be notified.':
     'Вы редактируете объявление другого пользователя как модератор. Владелец получит уведомление.',
+  'The server is not responding. Please try again in a moment.':
+    'Сервер не отвечает. Попробуйте ещё раз через минуту.',
+  'Please sign in to continue.':
+    'Войдите, чтобы продолжить.',
+  'Account for payments':
+    'Счёт для оплаты',
+  'The card or IBAN the buyer transfers the money to. A buyer sees it only after reserving the item. It is remembered for your next listings.':
+    'Карта или IBAN, на которые покупатель переводит деньги. Покупатель видит их только после бронирования. Значение запоминается для следующих объявлений.',
+  'Use letters, digits and spaces only':
+    'Только буквы, цифры и пробелы',
+  'Handover: meeting place or shipping':
+    'Передача: место встречи или доставка',
+  'Where you meet the buyer, or how you send the item. A buyer sees it only after reserving the item; the details are agreed in the chat.':
+    'Где вы встретитесь с покупателем или как отправите товар. Покупатель видит это только после бронирования; детали согласуются в чате.',
+  'e.g. Zürich main station, or by post from 8001 Zürich':
+    'напр. главный вокзал Цюриха или почтой из 8001 Zürich',
+  'Sent to {email}. If it is not in your inbox within a minute, look in the spam folder.':
+    'Отправлено на {email}. Если через минуту письма нет во входящих, проверьте папку «Спам».',
+  'Send the confirmation e-mail again':
+    'Отправить письмо с подтверждением ещё раз',
+  'The e-mail may land in the spam folder.':
+    'Письмо может попасть в папку «Спам».',
+  'Confirm your e-mail address to publish listings. The link is in the e-mail we sent you; it may be in the spam folder.':
+    'Подтвердите адрес e-mail, чтобы публиковать объявления. Ссылка находится в письме, которое мы вам отправили; оно может быть в папке «Спам».',
+  'Handover:':
+    'Передача:',
+  'Message buyer':
+    'Написать покупателю',
+  'Previous photo':
+    'Предыдущее фото',
+  'Next photo':
+    'Следующее фото',
+  'Photo {n} of {total}':
+    'Фото {n} из {total}',
+  'This link is invalid or has expired. Sign in and use “Send the confirmation e-mail again” in the banner at the top.':
+    'Эта ссылка недействительна или устарела. Войдите и нажмите «Отправить письмо с подтверждением ещё раз» в баннере вверху.',
 }

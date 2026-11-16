@@ -2,11 +2,11 @@ import bcrypt from 'bcrypt'
 import type { AuthTokenType, User } from '@prisma/client'
 import { env } from '../../config/env'
 import { randomToken, sha256 } from '../../lib/crypto'
-import { AppError, badRequest, conflict, forbidden, unauthorized } from '../../lib/errors'
+import { AppError, badRequest, conflict, unauthorized } from '../../lib/errors'
 import { logger } from '../../lib/logger'
 import { prisma } from '../../lib/prisma'
 import { mailer } from '../../mail/mailer'
-import { isBanned } from '../../middleware/auth'
+import { isBanned, suspendedError } from '../../middleware/auth'
 import { toAccount } from '../users/user.dto'
 import { signAccessToken } from './tokens'
 
@@ -14,6 +14,10 @@ const BCRYPT_ROUNDS = 12
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000
 const REFRESH_TTL_MS = env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000
+// Two tabs of one browser may send the same refresh token almost at once. The
+// loser of that race is an honest client, not a thief, so within this window
+// it is turned away without revoking the sessions of the winner.
+const ROTATION_GRACE_MS = 30_000
 
 // Compared against when the e-mail is unknown, so that login takes the same
 // time whether or not the account exists.
@@ -137,10 +141,7 @@ export const authService = {
     const passwordMatches = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_HASH)
     // One message for both cases: the response must not reveal which e-mails are registered.
     if (!user || !passwordMatches) throw unauthorized('Invalid e-mail or password')
-    if (isBanned(user)) {
-      const until = user.bannedPermanently ? 'permanently' : `until ${user.bannedUntil?.toISOString()}`
-      throw forbidden(`This account is suspended ${until}${user.banReason ? `: ${user.banReason}` : ''}`)
-    }
+    if (isBanned(user)) throw suspendedError(user)
     return issueSession(user, userAgent)
   },
 
@@ -156,6 +157,7 @@ export const authService = {
     })
     if (!record) throw unauthorized()
 
+    if (record.revokedAt && Date.now() - record.revokedAt.getTime() < ROTATION_GRACE_MS) throw unauthorized()
     if (record.revokedAt) {
       logger.warn({ userId: record.userId }, 'Refresh token reuse detected, revoking all sessions')
       await prisma.refreshToken.updateMany({
@@ -164,7 +166,8 @@ export const authService = {
       })
       throw unauthorized()
     }
-    if (record.expiresAt < new Date() || isBanned(record.user)) throw unauthorized()
+    if (isBanned(record.user)) throw suspendedError(record.user)
+    if (record.expiresAt < new Date()) throw unauthorized()
 
     // The conditional update makes rotation atomic: of two concurrent
     // refreshes with the same token, only one can win.

@@ -26,35 +26,56 @@ export const errorMessage = (error: unknown) =>
 // injected into the page could read anything kept in localStorage. The
 // long-lived refresh token is an HttpOnly cookie that JavaScript cannot see.
 let accessToken: string | null = null
-let onSessionLost: (() => void) | null = null
+let onSessionLost: ((message?: string) => void) | null = null
 let refreshInFlight: Promise<Session | null> | null = null
 
 export const getAccessToken = () => accessToken
 export const setAccessToken = (token: string | null) => {
   accessToken = token
 }
-export const setSessionLostHandler = (handler: (() => void) | null) => {
+export const setSessionLostHandler = (handler: ((message?: string) => void) | null) => {
   onSessionLost = handler
 }
 
-/** Exchanges the refresh cookie for a new session. Concurrent callers share one request. */
+/** Thrown when the session is over; the handler above has already told the user. */
+export const SESSION_ENDED = 'SESSION_ENDED'
+
+/**
+ * Tabs of one browser share the refresh cookie, and a refresh token works
+ * only once. The lock makes them take turns, so that two tabs never present
+ * the same token at the same moment and sign each other out.
+ */
+const acrossTabs = <T>(task: () => Promise<T>): Promise<T> =>
+  typeof navigator !== 'undefined' && 'locks' in navigator
+    ? (navigator.locks.request('session-refresh', task) as Promise<T>)
+    : task()
+
+/**
+ * Exchanges the refresh cookie for a new session. Concurrent callers share
+ * one request. Resolves to `null` only when the server says the session is
+ * over; a server that cannot be reached is an error, not a sign-out.
+ */
 export function refreshSession(): Promise<Session | null> {
-  refreshInFlight ??= (async () => {
+  refreshInFlight ??= acrossTabs(async () => {
+    let response: Response
     try {
-      const response = await fetch(`${BASE}/auth/refresh`, { method: 'POST', credentials: 'include' })
-      if (!response.ok) {
-        accessToken = null
-        return null
-      }
+      response = await fetch(`${BASE}/auth/refresh`, { method: 'POST', credentials: 'include' })
+    } catch {
+      throw new ApiError(0, 'NETWORK', t('Cannot reach the server. Check your connection and try again.'))
+    }
+    if (response.ok) {
       const session = (await response.json()) as Session
       accessToken = session.accessToken
       return session
-    } catch {
-      return null
-    } finally {
-      refreshInFlight = null
     }
-  })()
+    if (response.status === 401 || response.status === 403) {
+      accessToken = null
+      return null
+    }
+    throw new ApiError(response.status, 'UNAVAILABLE', t('The server is not responding. Please try again in a moment.'))
+  }).finally(() => {
+    refreshInFlight = null
+  })
   return refreshInFlight
 }
 
@@ -107,18 +128,30 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 
   // An expired access token is renewed once, transparently, and the request repeated.
   if (response.status === 401 && accessToken && !path.startsWith('/auth/')) {
-    if (await refreshSession()) response = await send(path, options)
-    else onSessionLost?.()
+    if (await refreshSession()) {
+      response = await send(path, options)
+    } else {
+      onSessionLost?.()
+      throw new ApiError(401, SESSION_ENDED, t('Your session has ended. Please sign in again.'))
+    }
   }
 
   if (response.status === 204) return undefined as T
   const data: unknown = await response.json().catch(() => null)
   if (!response.ok) {
     const error = (data as ErrorBody | null)?.error
+    if (error?.code === 'ACCOUNT_SUSPENDED' && accessToken) {
+      accessToken = null
+      onSessionLost?.(error.message)
+      throw new ApiError(403, SESSION_ENDED, error.message ?? '')
+    }
     throw new ApiError(
       response.status,
       error?.code ?? 'ERROR',
-      error?.message ?? `The request failed (${response.status})`,
+      // The server's wording for a missing sign-in is meant for developers.
+      response.status === 401 && error?.code === 'UNAUTHORIZED' && !path.startsWith('/auth/')
+        ? t('Please sign in to continue.')
+        : (error?.message ?? `The request failed (${response.status})`),
       error?.details,
     )
   }

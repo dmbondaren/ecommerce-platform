@@ -10,6 +10,7 @@ import { toast } from '../app/toast'
 import { ImagePicker } from '../components/ImagePicker'
 import { LocationPicker } from '../components/LocationPicker'
 import { Button, EmptyState, Field, FormError, PageHeader, QueryView, Spinner, fieldErrors } from '../components/ui'
+import { ResendVerification } from '../components/ResendVerification'
 import { t } from '../app/i18n'
 
 const CURRENCIES: Currency[] = ['CHF', 'EUR', 'USD', 'UAH']
@@ -25,6 +26,7 @@ interface FormState {
   imageUrls: string[]
   coordinates: Coordinates | null
   paymentAccount: string
+  meetingPlace: string
 }
 
 /**
@@ -50,7 +52,8 @@ function EditorForm({ listing, template }: { listing?: Listing; template?: Listi
     imageUrls: source?.imageUrls ?? [],
     coordinates: source?.coordinates ?? null,
     // Remembered from the user's last listing, so it only has to be typed once.
-    paymentAccount: moderating ? '' : (user?.paymentAccount ?? ''),
+    paymentAccount: moderating ? '' : (source?.paymentAccount ?? user?.paymentAccount ?? ''),
+    meetingPlace: moderating ? '' : (source?.meetingPlace ?? ''),
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<unknown>(null)
@@ -180,22 +183,47 @@ function EditorForm({ listing, template }: { listing?: Listing; template?: Listi
           {t('You are editing another user’s listing as a moderator. The owner will be notified.')}
         </p>
       )}
-      {!moderating && <Field
-        label={t('Account for payments (optional)')}
-        errors={errors.paymentAccount}
-        hint={t('For example your IBAN. A buyer sees it only after reserving the item. It is remembered for your next listings.')}
-      >
-        {(props) => (
-          <input
-            {...props}
-            maxLength={64}
-            autoComplete="off"
-            placeholder="CH00 0000 0000 0000 0000 0"
-            value={form.paymentAccount}
-            onChange={(event) => set('paymentAccount', event.target.value)}
-          />
-        )}
-      </Field>}
+      {!moderating && (
+        <>
+          <Field
+            label={t('Account for payments')}
+            errors={errors.paymentAccount}
+            hint={t('The card or IBAN the buyer transfers the money to. A buyer sees it only after reserving the item. It is remembered for your next listings.')}
+          >
+            {(props) => (
+              <input
+                {...props}
+                required
+                minLength={5}
+                maxLength={64}
+                pattern="[A-Za-z0-9 +\-]+"
+                title={t('Use letters, digits and spaces only')}
+                autoComplete="off"
+                placeholder="CH00 0000 0000 0000 0000 0"
+                value={form.paymentAccount}
+                onChange={(event) => set('paymentAccount', event.target.value)}
+              />
+            )}
+          </Field>
+          <Field
+            label={t('Handover: meeting place or shipping')}
+            errors={errors.meetingPlace}
+            hint={t('Where you meet the buyer, or how you send the item. A buyer sees it only after reserving the item; the details are agreed in the chat.')}
+          >
+            {(props) => (
+              <input
+                {...props}
+                required
+                minLength={3}
+                maxLength={200}
+                placeholder={t('e.g. Zürich main station, or by post from 8001 Zürich')}
+                value={form.meetingPlace}
+                onChange={(event) => set('meetingPlace', event.target.value)}
+              />
+            )}
+          </Field>
+        </>
+      )}
 
       <LocationPicker
         address={form.location}
@@ -237,6 +265,7 @@ export function ListingEditor() {
         {user && !user.isVerified ? (
           <EmptyState title={t('Confirm your e-mail address first')}>
             <p>{t('We sent you a link when you registered. Listings can be published once it is confirmed.')}</p>
+            <ResendVerification />
           </EmptyState>
         ) : templateId && existing.isPending ? (
           <Spinner />

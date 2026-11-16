@@ -11,6 +11,7 @@ The project started as my bachelor's thesis (Express, Sequelize, MySQL and one 1
 
 **Catalogue**
 - Listings with up to ten photos, categories, price in CHF / EUR / USD / UAH
+- A photo gallery with thumbnails, arrows, drag to change the photo and a full-screen view
 - Search with filters (category, price), sorting and pagination; the state lives in the URL, so a search can be shared
 - “Near me”: listings within 1–20 km of the user's home address, which is optional and never shown to others
 - Optional map position per listing (Leaflet and OpenStreetMap), found from the address or placed by hand
@@ -25,7 +26,8 @@ The project started as my bachelor's thesis (Express, Sequelize, MySQL and one 1
 - Reviews tied to a real purchase, with votes and replies, and a reminder after a purchase that can be declined
 
 **Selling**
-- Sellers can give the account buyers should pay to; it is shown only to a buyer who has reserved the item
+- Every listing names the account buyers pay to and where the item is handed over; both are shown only to a buyer who has reserved the item
+- Each deal has its own chat, which the buyer or the seller can open from the order
 - Sales analytics: revenue, average sale and a six-month chart
 - A sold item can be offered again: the form opens pre-filled, to be checked and published as a new listing
 
@@ -42,7 +44,8 @@ The project started as my bachelor's thesis (Express, Sequelize, MySQL and one 1
 **Moderation**
 - Roles: user, admin, super admin
 - Automatic screening of new and edited listings (prohibited items, off-platform payment requests, link spam); a flagged listing is published like any other and reported to the moderators
-- Reports, a moderation queue, temporary and permanent suspensions
+- Reports, a moderation queue, and suspensions for a number of minutes, hours or days, until a chosen date, or permanently
+- Admins can suspend regular users only; staff accounts are left to the super admin, who cannot be suspended at all
 - Moderators can correct a user's listing; the owner is notified and the change is logged
 - An audit log of every moderation action
 - Platform statistics for staff: totals, 30-day trends, sales by category, top sellers and buyers, and an archive of every order
@@ -92,7 +95,7 @@ client/
 
 ### Decisions worth explaining
 
-- **Sessions.** A 15-minute access token is kept in memory; the refresh token is an `HttpOnly` cookie scoped to the auth routes. Refresh tokens are stored hashed and rotated on every use, and presenting an already-used one revokes all sessions of that user (theft detection).
+- **Sessions.** A 15-minute access token is kept in memory; the refresh token is an `HttpOnly` cookie scoped to the auth routes. Refresh tokens are stored hashed and rotated on every use, and presenting an already-used one revokes all sessions of that user (theft detection). Tabs of one browser share the cookie, so they take turns refreshing (Web Locks), and a server that is briefly unreachable does not sign anyone out.
 - **Bans take effect immediately.** Role and ban status are read from the database on each request instead of being trusted from the token.
 - **Checkout is a conditional update.** `UPDATE … WHERE status = 'ACTIVE'` inside a transaction is the lock, so there is no window in which two buyers can both succeed. An integration test fires two purchases concurrently to prove it.
 - **Reservations expire safely.** Confirming a payment and expiring a reservation are both conditional updates on the order status, and the deadline is part of the confirmation's condition, so a late click cannot win against the background job that releases unpaid items.

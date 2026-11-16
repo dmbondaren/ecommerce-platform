@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { listingInputSchema, listingQuerySchema, phoneSchema } from '../../src/modules/listings/listing.schemas'
+import { banEnd, banSchema } from '../../src/modules/admin/admin.service'
+import {
+  listingInputSchema,
+  listingQuerySchema,
+  phoneSchema,
+  staffListingInputSchema,
+} from '../../src/modules/listings/listing.schemas'
 import { messageInputSchema } from '../../src/modules/conversations/conversations.service'
 
 const validListing = {
@@ -9,6 +15,8 @@ const validListing = {
   currency: 'CHF',
   categoryId: 1,
   imageUrls: ['/uploads/3f0c9a52-6f0e-4c58-9a59-0b5f3c1b9a10.jpg'],
+  paymentAccount: 'CH93 0076 2011 6238 5295 7',
+  meetingPlace: 'Zürich main station, by the big clock',
 }
 
 describe('listingInputSchema', () => {
@@ -77,5 +85,45 @@ describe('messageInputSchema', () => {
     expect(messageInputSchema.safeParse({ body: '   ' }).success).toBe(false)
     expect(messageInputSchema.safeParse({ body: 'Hello' }).success).toBe(true)
     expect(messageInputSchema.safeParse({ attachmentUrl: '/uploads/a.png' }).success).toBe(true)
+  })
+})
+
+describe('private listing fields', () => {
+  it('requires a payment account and a handover place from the seller', () => {
+    expect(listingInputSchema.safeParse({ ...validListing, paymentAccount: '' }).success).toBe(false)
+    expect(listingInputSchema.safeParse({ ...validListing, paymentAccount: undefined }).success).toBe(false)
+    expect(listingInputSchema.safeParse({ ...validListing, meetingPlace: '  ' }).success).toBe(false)
+    expect(listingInputSchema.safeParse({ ...validListing, paymentAccount: 'DROP TABLE; --' }).success).toBe(false)
+  })
+
+  it('neither requires nor accepts them from a moderator', () => {
+    const parsed = staffListingInputSchema.parse({ ...validListing, paymentAccount: undefined, meetingPlace: 'x' })
+    expect(parsed).not.toHaveProperty('paymentAccount')
+    expect(parsed).not.toHaveProperty('meetingPlace')
+  })
+})
+
+describe('banSchema', () => {
+  const now = new Date('2026-06-01T12:00:00Z')
+
+  it('ends after the given number of minutes', () => {
+    const input = banSchema.parse({ reason: 'Spam', minutes: 90 })
+    expect(banEnd(input, now)).toEqual(new Date('2026-06-01T13:30:00Z'))
+  })
+
+  it('ends at the given moment', () => {
+    const until = new Date(Date.now() + 3_600_000)
+    expect(banEnd(banSchema.parse({ reason: 'Spam', until: until.toISOString() }), now)).toEqual(until)
+  })
+
+  it('is permanent without a duration or an end', () => {
+    expect(banEnd(banSchema.parse({ reason: 'Spam' }), now)).toBeNull()
+  })
+
+  it('rejects an end in the past, a zero duration, and both at once', () => {
+    const later = new Date(Date.now() + 3_600_000).toISOString()
+    expect(banSchema.safeParse({ reason: 'Spam', until: '2020-01-01T00:00:00Z' }).success).toBe(false)
+    expect(banSchema.safeParse({ reason: 'Spam', minutes: 0 }).success).toBe(false)
+    expect(banSchema.safeParse({ reason: 'Spam', minutes: 10, until: later }).success).toBe(false)
   })
 })

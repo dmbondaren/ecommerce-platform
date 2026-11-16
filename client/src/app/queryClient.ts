@@ -1,5 +1,5 @@
 import { MutationCache, QueryClient } from '@tanstack/react-query'
-import { ApiError, errorMessage } from '../api/client'
+import { ApiError, errorMessage, SESSION_ENDED } from '../api/client'
 import { toast } from './toast'
 
 /**
@@ -23,6 +23,8 @@ export const queryClient = new QueryClient({
   mutationCache: new MutationCache({
     onError: (error, _variables, _context, mutation) => {
       if (mutation.meta?.silent) return
+      // The end of a session is announced once, by the session itself.
+      if (error instanceof ApiError && error.code === SESSION_ENDED) return
       toast.error(errorMessage(error))
     },
   }),

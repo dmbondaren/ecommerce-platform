@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { accountApi, authApi, chatApi } from '../api/endpoints'
+import { accountApi, chatApi } from '../api/endpoints'
 import { useAuth } from '../app/auth'
 import { useSavedListings } from '../app/hooks'
 import { keys } from '../app/queryClient'
@@ -11,6 +11,7 @@ import { ErrorBoundary } from './ErrorBoundary'
 import { Icon, type IconName } from './Icon'
 import { LanguageSwitch } from './LanguageSwitch'
 import { PaymentBanner } from './PaymentBanner'
+import { ResendVerification } from './ResendVerification'
 import { ReviewBanner } from './ReviewBanner'
 import { ThemeSwitch } from './ThemeSwitch'
 import { Avatar, Button } from './ui'
@@ -71,25 +72,12 @@ function SearchBox() {
 }
 
 function VerifyBanner() {
-  const [sent, setSent] = useState(false)
-  const resend = async () => {
-    try {
-      await authApi.resendVerification()
-      setSent(true)
-    } catch {
-      toast.error(t('The e-mail could not be sent. Please try again later.'))
-    }
-  }
   return (
     <div className="banner" role="status">
-      <span>{t('Confirm your e-mail address to publish listings. Check your inbox for the link.')}</span>
-      {sent ? (
-        <span className="muted">{t('Sent.')}</span>
-      ) : (
-        <button type="button" className="link" onClick={() => void resend()}>
-          {t('Send it again')}
-        </button>
-      )}
+      <span>
+        {t('Confirm your e-mail address to publish listings. The link is in the e-mail we sent you; it may be in the spam folder.')}
+      </span>
+      <ResendVerification compact />
     </div>
   )
 }
